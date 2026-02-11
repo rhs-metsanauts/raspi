@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Command Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .config-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .config-section label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .config-section input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: border-color 0.3s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+        }
+
+        .dynamic-fields {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .response-section {
+            margin-top: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .response-section.show {
+            display: block;
+        }
+
+        .response-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .response-content {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .response-content pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 0;
+        }
+
+        .success {
+            border-left-color: #28a745;
+        }
+
+        .error {
+            border-left-color: #dc3545;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #28a745;
+        }
+
+        .status-offline {
+            background: #dc3545;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Remote Command Control Panel</h1>
+            <p>Send commands to your FastAPI server</p>
+        </div>
+
+        <div class="content">
+            <!-- Server Configuration -->
+            <div class="config-section">
+                <label for="serverUrl">
+                    <span class="status-indicator status-offline" id="statusIndicator"></span>
+                    FastAPI Server URL
+                </label>
+                <input type="text" id="serverUrl" value="http://localhost:8000/execute" placeholder="http://localhost:8000/execute">
+            </div>
+
+            <!-- Command Type Selection -->
+            <div class="form-group">
+                <label for="commandType">Command Type</label>
+                <select id="commandType">
+                    <option value="bash_command">Bash Command</option>
+                    <option value="edit_file">Edit File</option>
+                    <option value="basic_action">Python Action</option>
+                    <option value="read_file">Read File</option>
+                </select>
+            </div>
+
+            <!-- Dynamic Fields -->
+            <div class="dynamic-fields">
+                <!-- Bash Command Fields -->
+                <div id="fields_bash_command" class="field-group">
+                    <div class="form-group">
+                        <label for="command">Command</label>
+                        <input type="text" id="command">
+                    </div>
+                </div>
+
+                <!-- Edit File Fields -->
+                <div id="fields_edit_file" class="field-group hidden">
+                    <div class="form-group">
+                        <label for="edit_file_name">File Name</label>
+                        <input type="text" id="edit_file_name">
+                    </div>
+                    <div class="form-group">
+                        <label for="file_content">File Content</label>
+                        <textarea id="file_content"></textarea>
+                    </div>
+                </div>
+
+                <!-- Basic Action Fields -->
+                <div id="fields_basic_action" class="field-group hidden">
+                    <div class="form-group">
+                        <label for="action">Python Code</label>
+                        <textarea id="action"></textarea>
+                    </div>
+                </div>
+
+                <!-- Read File Fields -->
+                <div id="fields_read_file" class="field-group hidden">
+                    <div class="form-group">
+                        <label for="read_file_name">File Name</label>
+                        <input type="text" id="read_file_name">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Send Button -->
+            <button class="btn" id="sendBtn" onclick="sendCommand()">
+                Send Command
+            </button>
+
+            <!-- Response Section -->
+            <div class="response-section" id="responseSection">
+                <h3>Response</h3>
+                <div class="response-content" id="responseContent">
+                    <pre id="responsePre"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update server URL configuration
+        document.getElementById('serverUrl').addEventListener('change', function() {
+            fetch('/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ server_url: this.value })
+            });
+        });
+
+        // Load current server configuration
+        fetch('/config')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('serverUrl').value = data.server_url;
+            });
+
+        // Handle command type change
+        document.getElementById('commandType').addEventListener('change', function() {
+            const selectedType = this.value;
+            
+            // Hide all field groups
+            document.querySelectorAll('.field-group').forEach(group => {
+                group.classList.add('hidden');
+            });
+            
+            // Show selected field group
+            document.getElementById('fields_' + selectedType).classList.remove('hidden');
+        });
+
+        // Send command to server
+        async function sendCommand() {
+            const commandType = document.getElementById('commandType').value;
+            const btn = document.getElementById('sendBtn');
+            const responseSection = document.getElementById('responseSection');
+            const responseContent = document.getElementById('responseContent');
+            const responsePre = document.getElementById('responsePre');
+            const statusIndicator = document.getElementById('statusIndicator');
+            
+            // Build payload based on command type
+            let payload = { type: commandType };
+            
+            switch(commandType) {
+                case 'bash_command':
+                    payload.command = document.getElementById('command').value;
+                    if (!payload.command) {
+                        alert('Please enter a command');
+                        return;
+                    }
+                    break;
+                
+                case 'edit_file':
+                    payload.file_name = document.getElementById('edit_file_name').value;
+                    payload.file_content = document.getElementById('file_content').value;
+                    if (!payload.file_name) {
+                        alert('Please enter a file name');
+                        return;
+                    }
+                    break;
+                
+                case 'basic_action':
+                    payload.action = document.getElementById('action').value;
+                    if (!payload.action) {
+                        alert('Please enter Python code');
+                        return;
+                    }
+                    break;
+                
+                case 'read_file':
+                    payload.file_name = document.getElementById('read_file_name').value;
+                    if (!payload.file_name) {
+                        alert('Please enter a file name');
+                        return;
+                    }
+                    break;
+            }
+            
+            // Disable button and show loading state
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            
+            try {
+                const response = await fetch('/send_command', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                // Show response
+                responseSection.classList.add('show');
+                
+                if (result.success) {
+                    responseContent.classList.remove('error');
+                    responseContent.classList.add('success');
+                    responsePre.textContent = JSON.stringify(result.data, null, 2);
+                    statusIndicator.classList.remove('status-offline');
+                    statusIndicator.classList.add('status-online');
+                } else {
+                    responseContent.classList.remove('success');
+                    responseContent.classList.add('error');
+                    responsePre.textContent = 'Error: ' + result.error;
+                    statusIndicator.classList.remove('status-online');
+                    statusIndicator.classList.add('status-offline');
+                }
+            } catch (error) {
+                responseSection.classList.add('show');
+                responseContent.classList.remove('success');
+                responseContent.classList.add('error');
+                responsePre.textContent = 'Error: ' + error.message;
+                statusIndicator.classList.remove('status-online');
+                statusIndicator.classList.add('status-offline');
+            } finally {
+                // Re-enable button
+                btn.disabled = false;
+                btn.textContent = 'Send Command';
+            }
+        }
+    </script>
+</body>
+</html>
