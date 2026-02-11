@@ -6,6 +6,7 @@ app = Flask(__name__)
 
 # Configuration - Change this to your FastAPI server URL
 FASTAPI_SERVER_URL = "http://localhost:8000/execute"
+DEFAULT_TIMEOUT = 35
 
 
 @app.route('/')
@@ -20,8 +21,11 @@ def send_command():
     try:
         data = request.get_json()
         
+        # Get timeout from request or use default
+        timeout = data.pop('timeout', DEFAULT_TIMEOUT)
+        
         # Send request to FastAPI server
-        response = requests.post(FASTAPI_SERVER_URL, json=data, timeout=35)
+        response = requests.post(FASTAPI_SERVER_URL, json=data, timeout=timeout)
         
         return jsonify({
             "success": True,
@@ -50,15 +54,16 @@ def send_command():
 
 @app.route('/config', methods=['GET', 'POST'])
 def config():
-    """Get or update FastAPI server URL"""
-    global FASTAPI_SERVER_URL
+    """Get or update FastAPI server URL and timeout"""
+    global FASTAPI_SERVER_URL, DEFAULT_TIMEOUT
     
     if request.method == 'POST':
         data = request.get_json()
         FASTAPI_SERVER_URL = data.get('server_url', FASTAPI_SERVER_URL)
-        return jsonify({"success": True, "server_url": FASTAPI_SERVER_URL})
+        DEFAULT_TIMEOUT = data.get('timeout', DEFAULT_TIMEOUT)
+        return jsonify({"success": True, "server_url": FASTAPI_SERVER_URL, "timeout": DEFAULT_TIMEOUT})
     
-    return jsonify({"server_url": FASTAPI_SERVER_URL})
+    return jsonify({"server_url": FASTAPI_SERVER_URL, "timeout": DEFAULT_TIMEOUT})
 
 
 if __name__ == '__main__':
