@@ -1,6 +1,9 @@
 import pi_servo_hat
 import RPi.GPIO as GPIO
 import time
+import cv2
+import base64
+from pathlib import Path
 
 class RockerBogie:
     def __init__(self):
@@ -105,6 +108,126 @@ class Drivebase:
         self.drive_instant(0, 0)
 
 
+class Camera:
+    """
+    Camera class for capturing images from a USB camera on Raspberry Pi.
+    
+    This class provides functionality to capture images and save them in both
+    PNG and base64 formats. It uses OpenCV to interface with USB cameras.
+    
+    Attributes:
+        camera: OpenCV VideoCapture object for the camera.
+        
+    Example:
+        >>> camera = Camera()
+        >>> camera.capture_and_save('/path/to/image')  # Saves image.png and image_b64.txt
+        >>> camera.release()
+    """
+    
+    def __init__(self, camera_index=0):
+        """
+        Initialize the Camera.
+        
+        Args:
+            camera_index (int): The index of the camera device (default is 0 for first USB camera).
+        
+        Raises:
+            RuntimeError: If the camera cannot be opened.
+        """
+        self.camera = cv2.VideoCapture(camera_index)
+        if not self.camera.isOpened():
+            raise RuntimeError(f"Failed to open camera at index {camera_index}")
+        
+        # Warm up the camera
+        time.sleep(0.5)
+    
+    def capture(self):
+        """
+        Capture a single frame from the camera.
+        
+        Returns:
+            numpy.ndarray: The captured image as a numpy array in BGR format.
+            
+        Raises:
+            RuntimeError: If frame capture fails.
+        """
+        ret, frame = self.camera.read()
+        if not ret:
+            raise RuntimeError("Failed to capture frame from camera")
+        return frame
+    
+    def save_as_png(self, image, filepath):
+        """
+        Save an image as a PNG file.
+        
+        Args:
+            image (numpy.ndarray): The image to save.
+            filepath (str): Path where the PNG file should be saved (without extension).
+        """
+        png_path = f"{filepath}.png"
+        cv2.imwrite(png_path, image)
+        return png_path
+    
+    def save_as_base64(self, image, filepath):
+        """
+        Save an image as a base64-encoded text file with data URI prefix.
+        
+        Args:
+            image (numpy.ndarray): The image to save.
+            filepath (str): Path where the base64 text file should be saved (without extension).
+        """
+        # Encode image to PNG format in memory
+        _, buffer = cv2.imencode('.png', image)
+        # Convert to base64
+        img_base64 = base64.b64encode(buffer).decode('utf-8')
+        
+        # Add data URI prefix for direct browser display
+        data_uri = f"data:image/png;base64,{img_base64}"
+        
+        # Save to text file
+        b64_path = f"{filepath}_b64.txt"
+        with open(b64_path, 'w') as f:
+            f.write(data_uri)
+        return b64_path
+    
+    def capture_and_save(self, filepath):
+        """
+        Capture an image and save it in both PNG and base64 formats.
+        
+        Args:
+            filepath (str): Base path for saving files (without extension).
+                          Will create {filepath}.png and {filepath}_b64.txt
+        
+        Returns:
+            tuple: Paths to the PNG and base64 files (png_path, b64_path).
+            
+        Example:
+            >>> camera.capture_and_save('/home/pi/images/photo_001')
+            # Creates: /home/pi/images/photo_001.png
+            #          /home/pi/images/photo_001_b64.txt
+        """
+        # Ensure directory exists
+        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+        
+        # Capture image
+        image = self.capture()
+        
+        # Save in both formats
+        png_path = self.save_as_png(image, filepath)
+        b64_path = self.save_as_base64(image, filepath)
+        
+        return png_path, b64_path
+    
+    def release(self):
+        """
+        Release the camera resources.
+        
+        This should be called when done using the camera to properly free resources.
+        """
+        if self.camera is not None:
+            self.camera.release()
+
+
 class Rover:
     """
     Rover class that combines Drivebase and RockerBogie functionality.
@@ -136,6 +259,7 @@ class Rover:
         """
         self.drivebase = Drivebase()
         self.rocker_bogie = RockerBogie()
+        self.camera = None  # Camera initialized on demand
     
     # ==================== Drivebase Methods ====================
     
@@ -275,6 +399,39 @@ class Rover:
         """
         self.rocker_bogie.toRegularPosition()
     
+    # ==================== Camera Methods ====================
+    
+    def init_camera(self, camera_index=0):
+        """
+        Initialize the camera system.
+        
+        Args:
+            camera_index (int): The index of the camera device (default is 0).
+            
+        Raises:
+            RuntimeError: If the camera cannot be opened.
+        """
+        if self.camera is None:
+            self.camera = Camera(camera_index)
+    
+    def take_picture(self, filepath):
+        """
+        Capture and save an image in both PNG and base64 formats.
+        
+        Args:
+            filepath (str): Base path for saving files (without extension).
+        
+        Returns:
+            tuple: Paths to the PNG and base64 files (png_path, b64_path).
+            
+        Example:
+            >>> rover.init_camera()
+            >>> rover.take_picture('/home/pi/images/photo_001')
+        """
+        if self.camera is None:
+            self.init_camera()
+        return self.camera.capture_and_save(filepath)
+    
     # ==================== System Management ====================
     
     def cleanup(self):
@@ -290,6 +447,8 @@ class Rover:
             without reinitializing GPIO resources.
         """
         self.drivebase.cleanup()
+        if self.camera is not None:
+            self.camera.release()
 
 
 if __name__ == '__main__':
@@ -298,5 +457,9 @@ if __name__ == '__main__':
     rover.forward(0.5, duration=2)   # Drive forward
     rover.turn_left(0.5, duration=1) # Turn left
     rover.stop()                     # Stop motors
-    rover.cleanup()                  # Clean up GPIO
     
+    # Take a picture
+    rover.init_camera()
+    rover.take_picture('/home/metsanauts/Documents/HERA/images/test_photo')
+    
+    rover.cleanup()                  # Clean up GPIO and camera
