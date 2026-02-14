@@ -5,6 +5,7 @@ import subprocess
 import os
 import sys
 from io import StringIO
+import base64
 
 app = FastAPI(title="Remote Command Server")
 
@@ -239,13 +240,81 @@ async def execute_command(payload: CommandPayload):
                     "file_name": payload.file_name
                 }
         
+        elif payload.type == "read_image":
+            if not payload.file_name:
+                return {
+                    "status": "error",
+                    "type": "read_image",
+                    "message": "Validation failed",
+                    "error_type": "ValidationError",
+                    "error_message": "file_name is required for read_image"
+                }
+            
+            try:
+                # Read image file
+                if not os.path.exists(payload.file_name):
+                    return {
+                        "status": "error",
+                        "type": "read_image",
+                        "message": "Image not found",
+                        "error_type": "FileNotFoundError",
+                        "error_message": f"Image '{payload.file_name}' does not exist",
+                        "file_name": payload.file_name
+                    }
+                
+                # Read image in binary mode and encode as base64
+                with open(payload.file_name, 'rb') as f:
+                    image_data = f.read()
+                    image_base64 = base64.b64encode(image_data).decode('utf-8')
+                
+                # Determine image format from file extension
+                file_ext = os.path.splitext(payload.file_name)[1].lower()
+                mime_types = {
+                    '.png': 'image/png',
+                    '.jpg': 'image/jpeg',
+                    '.jpeg': 'image/jpeg',
+                    '.gif': 'image/gif',
+                    '.bmp': 'image/bmp',
+                    '.webp': 'image/webp'
+                }
+                mime_type = mime_types.get(file_ext, 'image/png')
+                
+                return {
+                    "status": "success",
+                    "type": "read_image",
+                    "file_name": payload.file_name,
+                    "image_data": image_base64,
+                    "mime_type": mime_type,
+                    "size_bytes": len(image_data)
+                }
+            
+            except PermissionError:
+                return {
+                    "status": "error",
+                    "type": "read_image",
+                    "message": "Permission denied",
+                    "error_type": "PermissionError",
+                    "error_message": f"Cannot read '{payload.file_name}' - permission denied",
+                    "file_name": payload.file_name
+                }
+            
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "type": "read_image",
+                    "message": "Image read failed",
+                    "error_type": type(e).__name__,
+                    "error_message": str(e),
+                    "file_name": payload.file_name
+                }
+        
         else:
             return {
                 "status": "error",
                 "type": payload.type,
                 "message": "Unknown command type",
                 "error_type": "ValidationError",
-                "error_message": f"Unknown type: '{payload.type}'. Supported types: bash_command, edit_file, basic_action, read_file"
+                "error_message": f"Unknown type: '{payload.type}'. Supported types: bash_command, edit_file, basic_action, read_file, read_image"
             }
     
     except Exception as e:
@@ -265,7 +334,7 @@ async def root():
     return {
         "status": "online",
         "message": "Remote Command Server is running",
-        "supported_types": ["bash_command", "edit_file", "basic_action", "read_file"]
+        "supported_types": ["bash_command", "edit_file", "basic_action", "read_file", "read_image"]
     }
 
 

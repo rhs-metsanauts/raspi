@@ -120,7 +120,7 @@ class Camera:
         
     Example:
         >>> camera = Camera()
-        >>> camera.capture_and_save('/path/to/image')  # Saves image.png and image_b64.txt
+        >>> camera.capture_and_save('/path/to/image')  # Saves image.png
         >>> camera.release()
     """
     
@@ -168,55 +168,29 @@ class Camera:
         cv2.imwrite(png_path, image)
         return png_path
     
-    def save_as_base64(self, image, filepath):
-        """
-        Save an image as a base64-encoded text file with data URI prefix.
-        
-        Args:
-            image (numpy.ndarray): The image to save.
-            filepath (str): Path where the base64 text file should be saved (without extension).
-        """
-        # Encode image to PNG format in memory
-        _, buffer = cv2.imencode('.png', image)
-        # Convert to base64
-        img_base64 = base64.b64encode(buffer).decode('utf-8')
-        
-        # Add data URI prefix for direct browser display
-        data_uri = f"data:image/png;base64,{img_base64}"
-        
-        # Save to text file
-        b64_path = f"{filepath}_b64.txt"
-        with open(b64_path, 'w') as f:
-            f.write(data_uri)
-        return b64_path
-    
     def capture_and_save(self, filepath):
         """
-        Capture an image and save it in both PNG and base64 formats.
+        Capture an image and save it in PNG format.
         
         Args:
             filepath (str): Base path for saving files (without extension).
-                          Will create {filepath}.png and {filepath}_b64.txt
+                          Will create {filepath}.png for the image.
         
         Returns:
-            tuple: Paths to the PNG and base64 files (png_path, b64_path).
+            str: Path to the saved PNG file.
             
         Example:
             >>> camera.capture_and_save('/home/pi/images/photo_001')
             # Creates: /home/pi/images/photo_001.png
-            #          /home/pi/images/photo_001_b64.txt
         """
-        # Ensure directory exists
-        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
         
         # Capture image
         image = self.capture()
         
         # Save in both formats
         png_path = self.save_as_png(image, filepath)
-        b64_path = self.save_as_base64(image, filepath)
         
-        return png_path, b64_path
+        return png_path
     
     def release(self):
         """
@@ -416,13 +390,13 @@ class Rover:
     
     def take_picture(self, filepath):
         """
-        Capture and save an image in both PNG and base64 formats.
+        Capture and save an image in PNG format.
         
         Args:
-            filepath (str): Base path for saving files (without extension).
+            filepath (str): Base path for saving the image file (without extension).
         
         Returns:
-            tuple: Paths to the PNG and base64 files (png_path, b64_path).
+            str: Path to the saved PNG file.
             
         Example:
             >>> rover.init_camera()
@@ -460,6 +434,6 @@ if __name__ == '__main__':
     
     # Take a picture
     rover.init_camera()
-    rover.take_picture('/home/metsanauts/Documents/HERA/images/test_photo')
+    rover.take_picture('/images/test_photo')
     
     rover.cleanup()                  # Clean up GPIO and camera
