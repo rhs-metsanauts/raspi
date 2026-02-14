@@ -164,6 +164,8 @@ class Camera:
             image (numpy.ndarray): The image to save.
             filepath (str): Path where the PNG file should be saved (without extension).
         """
+        # Ensure directory exists
+        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
         png_path = f"{filepath}.png"
         cv2.imwrite(png_path, image)
         return png_path
@@ -431,9 +433,9 @@ if __name__ == '__main__':
     rover.forward(0.5, duration=2)   # Drive forward
     rover.turn_left(0.5, duration=1) # Turn left
     rover.stop()                     # Stop motors
-    
+    print('hi')
     # Take a picture
     rover.init_camera()
-    rover.take_picture('/images/test_photo')
-    
+    rover.take_picture('images/test_photo')
+    print('image captured')
     rover.cleanup()                  # Clean up GPIO and camera
