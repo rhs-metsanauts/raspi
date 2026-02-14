@@ -318,6 +318,51 @@
         .hidden {
             display: none;
         }
+
+        /* Mode Switcher */
+        .mode-switcher {
+            display: flex;
+            background: rgba(10, 37, 77, 0.62);
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(122, 173, 255, 0.25);
+            overflow: hidden;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            background: transparent;
+            color: #7ca8d9;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+            text-align: center;
+            position: relative;
+        }
+
+        .mode-btn:first-child {
+            border-right: 1px solid rgba(122, 173, 255, 0.25);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
+            color: #f4f8ff;
+        }
+
+        .mode-btn:hover:not(.active) {
+            background: rgba(124, 192, 255, 0.08);
+        }
+
+        .mode-label {
+            display: block;
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 2px;
+            font-weight: 400;
+        }
     </style>
 </head>
 <body>
@@ -329,19 +374,40 @@
         </div>
 
         <div class="content">
-            <!-- Server Configuration -->
-            <div class="config-section">
-                <label for="serverUrl">
-                    <span class="status-indicator status-offline" id="statusIndicator"></span>
-                    Rover Server Host (e.g., localhost or IP address)
-                </label>
-                <input type="text" id="serverUrl" value="localhost" placeholder="localhost or 192.168.x.x">
+            <!-- Mode Switcher -->
+            <div class="mode-switcher">
+                <button class="mode-btn active" id="modeWifi" onclick="setMode('wifi')">
+                    WiFi
+                    <span class="mode-label">Send via network</span>
+                </button>
+                <button class="mode-btn" id="modeLora" onclick="setMode('lora')">
+                    LoRA
+                    <span class="mode-label">Send via radio</span>
+                </button>
             </div>
 
-            <!-- Timeout Configuration -->
-            <div class="config-section">
-                <label for="timeout">Request Timeout (seconds)</label>
-                <input type="number" id="timeout" value="35" min="1" max="300">
+            <!-- WiFi Configuration -->
+            <div id="wifiConfig">
+                <div class="config-section">
+                    <label for="serverUrl">
+                        <span class="status-indicator status-offline" id="statusIndicator"></span>
+                        Rover Server Host (e.g., localhost or IP address)
+                    </label>
+                    <input type="text" id="serverUrl" value="localhost" placeholder="localhost or 192.168.x.x">
+                </div>
+
+                <div class="config-section">
+                    <label for="timeout">Request Timeout (seconds)</label>
+                    <input type="number" id="timeout" value="35" min="1" max="300">
+                </div>
+            </div>
+
+            <!-- LoRA Configuration -->
+            <div id="loraConfig" class="hidden">
+                <div class="config-section">
+                    <label for="loraDestination">LoRA Destination ID (0-255)</label>
+                    <input type="number" id="loraDestination" value="0" min="0" max="255" placeholder="Recipient integer ID">
+                </div>
             </div>
 
             <!-- Command Type Selection -->
@@ -418,9 +484,10 @@
     </div>
 
     <script>
+        let currentMode = 'wifi';
+
         // Helper function to build full URL from hostname
         function buildFullUrl(host) {
-            // Remove any existing protocol, port, or path
             host = host.replace(/^https?:\/\//, '').replace(/:\d+.*$/, '').replace(/\/.*$/, '');
             return `http://${host}:8000/execute`;
         }
@@ -435,38 +502,68 @@
             }
         }
 
-        // Update server URL configuration
-        document.getElementById('serverUrl').addEventListener('change', function() {
+        // Mode switcher
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('modeWifi').classList.toggle('active', mode === 'wifi');
+            document.getElementById('modeLora').classList.toggle('active', mode === 'lora');
+            document.getElementById('wifiConfig').classList.toggle('hidden', mode !== 'wifi');
+            document.getElementById('loraConfig').classList.toggle('hidden', mode !== 'lora');
+            
+            // Update command type options based on mode
+            const commandTypeSelect = document.getElementById('commandType');
+            const currentValue = commandTypeSelect.value;
+            const readFileOption = commandTypeSelect.querySelector('option[value="read_file"]');
+            const readImageOption = commandTypeSelect.querySelector('option[value="read_image"]');
+            
+            if (mode === 'lora') {
+                // Hide read options in LoRA mode
+                if (readFileOption) readFileOption.style.display = 'none';
+                if (readImageOption) readImageOption.style.display = 'none';
+                
+                // If currently on a read option, switch to bash_command
+                if (currentValue === 'read_file' || currentValue === 'read_image') {
+                    commandTypeSelect.value = 'bash_command';
+                    commandTypeSelect.dispatchEvent(new Event('change'));
+                }
+            } else {
+                // Show all options in WiFi mode
+                if (readFileOption) readFileOption.style.display = '';
+                if (readImageOption) readImageOption.style.display = '';
+            }
+            
             updateConfig();
-        });
+        }
 
-        // Update timeout configuration
-        document.getElementById('timeout').addEventListener('change', function() {
-            updateConfig();
-        });
+        // Update server configuration
+        document.getElementById('serverUrl').addEventListener('change', updateConfig);
+        document.getElementById('timeout').addEventListener('change', updateConfig);
+        document.getElementById('loraDestination').addEventListener('change', updateConfig);
 
         function updateConfig() {
             const host = document.getElementById('serverUrl').value;
             const fullUrl = buildFullUrl(host);
-            
+
             fetch('/config', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     server_url: fullUrl,
-                    timeout: parseInt(document.getElementById('timeout').value)
+                    timeout: parseInt(document.getElementById('timeout').value),
+                    mode: currentMode,
+                    lora_destination: parseInt(document.getElementById('loraDestination').value)
                 })
             });
         }
 
-        // Load current server configuration
+        // Load current configuration
         fetch('/config')
             .then(response => response.json())
             .then(data => {
                 document.getElementById('serverUrl').value = extractHostname(data.server_url);
                 document.getElementById('timeout').value = data.timeout;
+                document.getElementById('loraDestination').value = data.lora_destination || 0;
+                if (data.mode) setMode(data.mode);
             });
 
         // Handle command type change
@@ -588,7 +685,9 @@
             // Build payload based on command type
             let payload = { 
                 type: commandType,
-                timeout: parseInt(document.getElementById('timeout').value)
+                mode: currentMode,
+                timeout: parseInt(document.getElementById('timeout').value),
+                lora_destination: parseInt(document.getElementById('loraDestination').value)
             };
             
             switch(commandType) {
