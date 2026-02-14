@@ -36,7 +36,7 @@ def send_command():
     except requests.exceptions.ConnectionError:
         return jsonify({
             "success": False,
-            "error": "Could not connect to FastAPI server. Make sure it's running."
+            "error": "Could not connect to Rover. Make sure it's powered on and connected to the network."
         }), 503
     
     except requests.exceptions.Timeout:

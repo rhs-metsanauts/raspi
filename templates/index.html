@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NASA Mission Control Panel</title>
+    <title>NASA HERA Rover Control Panel</title>
     <style>
         * {
             margin: 0;
@@ -333,9 +333,9 @@
             <div class="config-section">
                 <label for="serverUrl">
                     <span class="status-indicator status-offline" id="statusIndicator"></span>
-                    Rover Server URL
+                    Rover Server Host (e.g., localhost or IP address)
                 </label>
-                <input type="text" id="serverUrl" value="http://localhost:8000/execute" placeholder="http://localhost:8000/execute">
+                <input type="text" id="serverUrl" value="localhost" placeholder="localhost or 192.168.x.x">
             </div>
 
             <!-- Timeout Configuration -->
@@ -418,6 +418,23 @@
     </div>
 
     <script>
+        // Helper function to build full URL from hostname
+        function buildFullUrl(host) {
+            // Remove any existing protocol, port, or path
+            host = host.replace(/^https?:\/\//, '').replace(/:\d+.*$/, '').replace(/\/.*$/, '');
+            return `http://${host}:8000/execute`;
+        }
+
+        // Helper function to extract hostname from full URL
+        function extractHostname(fullUrl) {
+            try {
+                const match = fullUrl.match(/^https?:\/\/([^:\/]+)/);
+                return match ? match[1] : fullUrl;
+            } catch {
+                return fullUrl;
+            }
+        }
+
         // Update server URL configuration
         document.getElementById('serverUrl').addEventListener('change', function() {
             updateConfig();
@@ -429,13 +446,16 @@
         });
 
         function updateConfig() {
+            const host = document.getElementById('serverUrl').value;
+            const fullUrl = buildFullUrl(host);
+            
             fetch('/config', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ 
-                    server_url: document.getElementById('serverUrl').value,
+                    server_url: fullUrl,
                     timeout: parseInt(document.getElementById('timeout').value)
                 })
             });
@@ -445,7 +465,7 @@
         fetch('/config')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('serverUrl').value = data.server_url;
+                document.getElementById('serverUrl').value = extractHostname(data.server_url);
                 document.getElementById('timeout').value = data.timeout;
             });
 
