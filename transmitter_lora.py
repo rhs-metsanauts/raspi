@@ -21,23 +21,28 @@ RESET = digitalio.DigitalInOut(board.RFM_RST)
 
 # Initialise RFM95 radio
 rfm95 = adafruit_rfm9x.RFM9x(board.SPI(), CS, RESET, RADIO_FREQ_MHZ)
+rfm95.tx_power = 23  # Max transmission power (5-23 dBm)
 
 def create_packets(json_data, recipient_id, packet_content_id):
     """
     Create packets from JSON data with the specified structure.
     
-    Packet structure (252 bytes total):
+    The adafruit_rfm9x library adds a 4-byte header to every packet.
+    The RFM95 FIFO max is 252 bytes, so our payload max is 248 bytes.
+    
+    Packet structure (248 bytes payload):
     - Byte 0: Recipient ID (1 byte)
     - Bytes 1-4: Unique Packet Content ID (4 bytes)
     - Bytes 5-6: Index (2 bytes, 0-65535)
     - Bytes 7-8: Total number of indexes (2 bytes)
-    - Bytes 9-251: Message content (243 bytes per chunk)
+    - Bytes 9-247: Message content (239 bytes per chunk)
     """
     # Convert JSON to bytes
     json_bytes = json.dumps(json_data).encode('utf-8')
     
-    # Calculate number of chunks needed
-    chunk_size = 243
+    # Max payload = 252 (FIFO) - 4 (library header) = 248
+    # Our header = 9 bytes, so chunk = 248 - 9 = 239
+    chunk_size = 239
     total_chunks = (len(json_bytes) + chunk_size - 1) // chunk_size
     
     if total_chunks > 65535:
@@ -51,7 +56,7 @@ def create_packets(json_data, recipient_id, packet_content_id):
         chunk = json_bytes[start:end]
         
         # Pad chunk to 243 bytes if it's the last one and shorter
-        chunk = chunk.ljust(chunk_size, b'\x00')
+        chunk = chunk + b'\x00' * (chunk_size - len(chunk))
         
         # Build packet
         packet = bytearray()
@@ -67,7 +72,12 @@ def create_packets(json_data, recipient_id, packet_content_id):
 
 # Read JSON from file
 with open('message.json', 'r') as f:
-    json_data = json.load(f)
+    # Read as text and strip any BOM or whitespace
+    content = f.read().strip()
+    # Remove BOM if present
+    if content.startswith('\ufeff'):
+        content = content[1:]
+    json_data = json.loads(content)
 
 # Extract recipient ID from JSON
 recipient_id = json_data.get('Recipient', 0)
@@ -87,7 +97,7 @@ print('-' * 50)
 for i, packet in enumerate(packets):
     rfm95.send(packet)
     print(f'✓ Sent packet {i+1}/{len(packets)} (Index: {i})')
-    time.sleep(0.05)
+    time.sleep(0.1)
 
 print('-' * 50)
 print(f'Successfully sent all packets to recipient {recipient_id}')
