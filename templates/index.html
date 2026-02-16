@@ -166,6 +166,25 @@
             transform: none;
         }
 
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+            width: auto;
+        }
+
+        .btn-ai {
+            background: linear-gradient(135deg, #2a6f2a 0%, #3d8b3d 55%, #4ca84c 100%);
+        }
+
+        .btn-ai:hover {
+            box-shadow: 0 8px 24px rgba(76, 168, 76, 0.4);
+        }
+
         .response-section {
             margin-top: 25px;
             padding: 20px;
@@ -363,6 +382,88 @@
             margin-top: 2px;
             font-weight: 400;
         }
+
+        /* Chat Panel */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 400px;
+            background: rgba(10, 37, 77, 0.62);
+            border: 1px solid rgba(122, 173, 255, 0.25);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: #06152f;
+        }
+
+        .chat-message {
+            margin-bottom: 12px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .chat-message.user {
+            background: rgba(13, 71, 161, 0.3);
+            border-left: 3px solid #1e88e5;
+            color: #dbe9ff;
+        }
+
+        .chat-message.assistant {
+            background: rgba(42, 111, 42, 0.2);
+            border-left: 3px solid #4caf50;
+            color: #c8e6c9;
+        }
+
+        .chat-input-group {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            border-top: 1px solid rgba(122, 173, 255, 0.25);
+            background: rgba(10, 37, 77, 0.4);
+        }
+
+        .chat-input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #3a5f9a;
+            border-radius: 6px;
+            font-size: 13px;
+            background: #06152f;
+            color: #eaf2ff;
+        }
+
+        .chat-input-group input:focus {
+            outline: none;
+            border-color: #7cc0ff;
+            box-shadow: 0 0 0 2px rgba(53, 128, 255, 0.2);
+        }
+
+        .chat-send-btn {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #2a6f2a 0%, #3d8b3d 100%);
+            border: 1px solid rgba(76, 168, 76, 0.45);
+            color: #f4f8ff;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .chat-send-btn:hover {
+            box-shadow: 0 4px 12px rgba(76, 168, 76, 0.3);
+        }
+
+        .chat-send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -469,10 +570,28 @@
                 </div>
             </div>
 
-            <!-- Send Button -->
-            <button class="btn" id="sendBtn" onclick="sendCommand()">
-                Send Command
-            </button>
+            <!-- Buttons -->
+            <div class="btn-group">
+                <button class="btn btn-ai" id="aiBtn" onclick="generateWithAI()">
+                    🤖 AI Generate
+                </button>
+                <button class="btn" id="sendBtn" onclick="sendCommand()">
+                    Send Command
+                </button>
+            </div>
+
+            <!-- Chat Panel -->
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message assistant">
+                        💬 Welcome! Ask me anything or use the AI Generate button above.
+                    </div>
+                </div>
+                <div class="chat-input-group">
+                    <input type="text" id="chatInput" placeholder="Ask anything...">
+                    <button class="chat-send-btn" id="chatSendBtn" onclick="sendChat()">Send</button>
+                </div>
+            </div>
 
             <!-- Response Section -->
             <div class="response-section" id="responseSection">
@@ -509,18 +628,18 @@
             document.getElementById('modeLora').classList.toggle('active', mode === 'lora');
             document.getElementById('wifiConfig').classList.toggle('hidden', mode !== 'wifi');
             document.getElementById('loraConfig').classList.toggle('hidden', mode !== 'lora');
-            
+
             // Update command type options based on mode
             const commandTypeSelect = document.getElementById('commandType');
             const currentValue = commandTypeSelect.value;
             const readFileOption = commandTypeSelect.querySelector('option[value="read_file"]');
             const readImageOption = commandTypeSelect.querySelector('option[value="read_image"]');
-            
+
             if (mode === 'lora') {
                 // Hide read options in LoRA mode
                 if (readFileOption) readFileOption.style.display = 'none';
                 if (readImageOption) readImageOption.style.display = 'none';
-                
+
                 // If currently on a read option, switch to bash_command
                 if (currentValue === 'read_file' || currentValue === 'read_image') {
                     commandTypeSelect.value = 'bash_command';
@@ -531,7 +650,7 @@
                 if (readFileOption) readFileOption.style.display = '';
                 if (readImageOption) readImageOption.style.display = '';
             }
-            
+
             updateConfig();
         }
 
@@ -569,12 +688,12 @@
         // Handle command type change
         document.getElementById('commandType').addEventListener('change', function() {
             const selectedType = this.value;
-            
+
             // Hide all field groups
             document.querySelectorAll('.field-group').forEach(group => {
                 group.classList.add('hidden');
             });
-            
+
             // Show selected field group
             document.getElementById('fields_' + selectedType).classList.remove('hidden');
         });
@@ -583,7 +702,7 @@
         function displayResponse(data, isError = false) {
             const responseContent = document.getElementById('responseContent');
             responseContent.innerHTML = '';
-            
+
             if (isError) {
                 responseContent.classList.remove('success');
                 responseContent.classList.add('error');
@@ -591,35 +710,35 @@
                 responseContent.classList.remove('error');
                 responseContent.classList.add('success');
             }
-            
+
             // Create field boxes for each key-value pair
             Object.entries(data).forEach(([key, value]) => {
                 const fieldBox = document.createElement('div');
                 fieldBox.className = 'response-field';
-                
+
                 const label = document.createElement('div');
                 label.className = 'field-label';
                 label.textContent = key;
-                
+
                 // Special handling for image data
                 if (key === 'image_data' && data.mime_type) {
                     const imageContainer = document.createElement('div');
                     imageContainer.className = 'image-container';
-                    
+
                     const img = document.createElement('img');
                     img.src = `data:${data.mime_type};base64,${value}`;
                     img.alt = data.file_name || 'Image';
-                    
+
                     fieldBox.appendChild(label);
                     imageContainer.appendChild(img);
                     fieldBox.appendChild(imageContainer);
                     responseContent.appendChild(fieldBox);
                     return;
                 }
-                
+
                 const valueDiv = document.createElement('div');
                 valueDiv.className = 'field-value';
-                
+
                 // Format the value
                 let formattedValue;
                 if (typeof value === 'object') {
@@ -630,25 +749,25 @@
                 } else {
                     formattedValue = String(value);
                 }
-                
+
                 valueDiv.textContent = formattedValue;
-                
+
                 // Check if content is more than 5 lines
                 const lineCount = formattedValue.split('\n').length;
-                
+
                 if (lineCount === 1) {
                     // Single line - display inline
                     fieldBox.classList.add('inline');
                     label.classList.add('inline');
                     valueDiv.classList.add('inline');
                     label.textContent = key + ':';
-                    
+
                     fieldBox.appendChild(label);
                     fieldBox.appendChild(valueDiv);
                 } else if (lineCount > 5) {
                     // Multi-line with collapse
                     valueDiv.classList.add('collapsed');
-                    
+
                     const expandBtn = document.createElement('button');
                     expandBtn.className = 'expand-btn';
                     expandBtn.textContent = 'Show More';
@@ -661,7 +780,7 @@
                             expandBtn.textContent = 'Show More';
                         }
                     };
-                    
+
                     fieldBox.appendChild(label);
                     fieldBox.appendChild(valueDiv);
                     fieldBox.appendChild(expandBtn);
@@ -670,9 +789,148 @@
                     fieldBox.appendChild(label);
                     fieldBox.appendChild(valueDiv);
                 }
-                
+
                 responseContent.appendChild(fieldBox);
             });
+        }
+
+        // Send chat message
+        async function sendChat() {
+            const chatInput = document.getElementById('chatInput');
+            const chatSendBtn = document.getElementById('chatSendBtn');
+            const chatMessages = document.getElementById('chatMessages');
+            const message = chatInput.value.trim();
+
+            if (!message) {
+                return;
+            }
+
+            // Add user message to chat
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.className = 'chat-message user';
+            userMsgDiv.textContent = message;
+            chatMessages.appendChild(userMsgDiv);
+
+            chatInput.value = '';
+            chatSendBtn.disabled = true;
+            chatSendBtn.textContent = '⏳ Thinking...';
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: message })
+                });
+
+                const result = await response.json();
+
+                // Add assistant response to chat
+                const assistantMsgDiv = document.createElement('div');
+                assistantMsgDiv.className = 'chat-message assistant';
+                assistantMsgDiv.textContent = result.response || result.error || 'No response';
+                chatMessages.appendChild(assistantMsgDiv);
+
+                // Auto-scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            } catch (error) {
+                const errorMsgDiv = document.createElement('div');
+                errorMsgDiv.className = 'chat-message assistant';
+                errorMsgDiv.textContent = '❌ Error: ' + error.message;
+                chatMessages.appendChild(errorMsgDiv);
+            } finally {
+                chatSendBtn.disabled = false;
+                chatSendBtn.textContent = 'Send';
+            }
+        }
+
+        // Allow Enter key to send chat
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('chatInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendChat();
+                }
+            });
+        });
+
+        // Generate command with AI
+        async function generateWithAI() {
+            const commandType = document.getElementById('commandType').value;
+            const aiBtn = document.getElementById('aiBtn');
+            const responseSection = document.getElementById('responseSection');
+
+            // Build AI prompt based on current command type
+            let prompt = '';
+
+            switch(commandType) {
+                case 'bash_command':
+                    prompt = 'Generate a bash command that ' + (document.getElementById('command').value || 'performs a useful system operation');
+                    break;
+                case 'edit_file':
+                    prompt = 'Generate a bash command to edit file: ' + (document.getElementById('edit_file_name').value || 'a file');
+                    break;
+                case 'basic_action':
+                    prompt = 'Generate Python code that ' + (document.getElementById('action').value || 'performs a useful action');
+                    break;
+                case 'read_file':
+                    prompt = 'Generate a bash command to read file: ' + (document.getElementById('read_file_name').value || 'a file');
+                    break;
+                case 'read_image':
+                    prompt = 'Generate a bash command to read and display image: ' + (document.getElementById('image_file_name').value || 'an image file');
+                    break;
+            }
+
+            if (!prompt.trim()) {
+                alert('Please provide some details about what you want to do');
+                return;
+            }
+
+            aiBtn.disabled = true;
+            aiBtn.textContent = '🤖 Generating...';
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    responseSection.classList.add('show');
+                    displayResponse({ error: result.error }, true);
+                } else {
+                    const generatedText = result.code.trim();
+
+                    // Auto-fill the appropriate field
+                    switch(commandType) {
+                        case 'bash_command':
+                            document.getElementById('command').value = generatedText;
+                            break;
+                        case 'edit_file':
+                            document.getElementById('file_content').value = generatedText;
+                            break;
+                        case 'basic_action':
+                            document.getElementById('action').value = generatedText;
+                            break;
+                        case 'read_file':
+                            document.getElementById('read_file_name').value = generatedText;
+                            break;
+                        case 'read_image':
+                            document.getElementById('image_file_name').value = generatedText;
+                            break;
+                    }
+
+                    responseSection.classList.add('show');
+                    displayResponse({ message: 'Command/code generated and filled in!' }, false);
+                }
+            } catch (error) {
+                responseSection.classList.add('show');
+                displayResponse({ error: error.message }, true);
+            } finally {
+                aiBtn.disabled = false;
+                aiBtn.textContent = '🤖 AI Generate';
+            }
         }
 
         // Send command to server
@@ -681,15 +939,15 @@
             const btn = document.getElementById('sendBtn');
             const responseSection = document.getElementById('responseSection');
             const statusIndicator = document.getElementById('statusIndicator');
-            
+
             // Build payload based on command type
-            let payload = { 
+            let payload = {
                 type: commandType,
                 mode: currentMode,
                 timeout: parseInt(document.getElementById('timeout').value),
                 lora_destination: parseInt(document.getElementById('loraDestination').value)
             };
-            
+
             switch(commandType) {
                 case 'bash_command':
                     payload.command = document.getElementById('command').value;
@@ -698,7 +956,7 @@
                         return;
                     }
                     break;
-                
+
                 case 'edit_file':
                     payload.file_name = document.getElementById('edit_file_name').value;
                     payload.file_content = document.getElementById('file_content').value;
@@ -707,7 +965,7 @@
                         return;
                     }
                     break;
-                
+
                 case 'basic_action':
                     payload.action = document.getElementById('action').value;
                     if (!payload.action) {
@@ -715,7 +973,7 @@
                         return;
                     }
                     break;
-                
+
                 case 'read_file':
                     payload.file_name = document.getElementById('read_file_name').value;
                     if (!payload.file_name) {
@@ -723,7 +981,7 @@
                         return;
                     }
                     break;
-                
+
                 case 'read_image':
                     payload.file_name = document.getElementById('image_file_name').value;
                     if (!payload.file_name) {
@@ -732,11 +990,11 @@
                     }
                     break;
             }
-            
+
             // Disable button and show loading state
             btn.disabled = true;
             btn.textContent = 'Sending...';
-            
+
             try {
                 const response = await fetch('/send_command', {
                     method: 'POST',
@@ -745,12 +1003,12 @@
                     },
                     body: JSON.stringify(payload)
                 });
-                
+
                 const result = await response.json();
-                
+
                 // Show response
                 responseSection.classList.add('show');
-                
+
                 if (result.success) {
                     displayResponse(result.data, false);
                     statusIndicator.classList.remove('status-offline');
