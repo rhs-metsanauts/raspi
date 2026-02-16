@@ -10,7 +10,7 @@ FASTAPI_SERVER_URL = "http://localhost:8000/execute"
 DEFAULT_TIMEOUT = 35
 TRANSMISSION_MODE = "wifi"  # "wifi" or "lora"
 LORA_DESTINATION = 0  # Integer destination for LoRA
-LORA_MESSAGE_PATH = r"message.json"
+LORA_MESSAGE_PATH = r"D:\message.json"  # Path where LoRA transmitter reads messages from
 
 
 @app.route('/')
@@ -86,6 +86,11 @@ def _send_lora(data):
             }
         })
 
+    except (FileNotFoundError, OSError) as e:
+        return jsonify({
+            "success": False,
+            "error": "Cannot write to LoRA module. Please check that the LoRA transmitter is connected and the drive is accessible."
+        }), 503
     except Exception as e:
         return jsonify({
             "success": False,
