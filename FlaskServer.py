@@ -1,7 +1,10 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 import requests
 import json
 import os
+from ollama import chat
+from pydantic import BaseModel
+from typing import Optional
 
 app = Flask(__name__)
 
@@ -11,6 +14,25 @@ DEFAULT_TIMEOUT = 35
 TRANSMISSION_MODE = "wifi"  # "wifi" or "lora"
 LORA_DESTINATION = 0  # Integer destination for LoRA
 LORA_MESSAGE_PATH = r"D:\message.json"  # Path where LoRA transmitter reads messages from
+OLLAMA_MODEL = "qwen3:0.6b"  # Ollama model for AI assistant
+
+# Load AI system prompt from markdown file
+_PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_system_prompt.md")
+with open(_PROMPT_PATH, "r", encoding="utf-8") as _f:
+    AI_SYSTEM_PROMPT = _f.read()
+
+# Load Robot.py source so the LLM knows every available class/method
+_ROBOT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Robot.py")
+with open(_ROBOT_PATH, "r", encoding="utf-8") as _f:
+    _ROBOT_SOURCE = _f.read()
+
+AI_SYSTEM_PROMPT += "\n\n## Robot.py Source Code\n\n```python\n" + _ROBOT_SOURCE + "\n```\n"
+
+
+class RoverCommand(BaseModel):
+    """Structured output the LLM must produce."""
+    type: str  # bash_command | edit_file | basic_action | read_file | read_image
+    fields: dict
 
 
 @app.route('/')
@@ -123,6 +145,70 @@ def config():
         "mode": TRANSMISSION_MODE,
         "lora_destination": LORA_DESTINATION
     })
+
+
+@app.route('/ai_command', methods=['POST'])
+def ai_command():
+    """Stream an LLM response that decides the command type and body."""
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '')
+        history = data.get('history', [])
+        mode = data.get('mode', TRANSMISSION_MODE)
+
+        if not user_message:
+            return jsonify({"success": False, "error": "No message provided"}), 400
+
+        # Build messages list: system prompt (with current mode), then history, then user msg
+        system_content = AI_SYSTEM_PROMPT + f"\n\n## Current Transmission Mode\nThe current mode is **{mode}**."
+        messages = [{"role": "system", "content": system_content}]
+        messages.extend(history)
+        messages.append({"role": "user", "content": user_message})
+
+        def generate():
+            """SSE generator that streams thinking + final JSON."""
+            thinking_buffer = ""
+            content_buffer = ""
+            in_thinking = False
+
+            stream = chat(
+                model=OLLAMA_MODEL,
+                messages=messages,
+                think=True,
+                stream=True,
+                format=RoverCommand.model_json_schema(),
+            )
+
+            for chunk in stream:
+                # Thinking tokens
+                if chunk.message.thinking:
+                    if not in_thinking:
+                        in_thinking = True
+                        yield f"data: {json.dumps({'type': 'thinking_start'})}\n\n"
+                    thinking_buffer += chunk.message.thinking
+                    yield f"data: {json.dumps({'type': 'thinking', 'content': chunk.message.thinking})}\n\n"
+
+                # Content tokens (the actual JSON answer)
+                if chunk.message.content:
+                    if in_thinking:
+                        in_thinking = False
+                        yield f"data: {json.dumps({'type': 'thinking_end'})}\n\n"
+                    content_buffer += chunk.message.content
+                    yield f"data: {json.dumps({'type': 'content', 'content': chunk.message.content})}\n\n"
+
+            # Parse final structured result
+            try:
+                command = RoverCommand.model_validate_json(content_buffer)
+                yield f"data: {json.dumps({'type': 'result', 'command': command.model_dump()})}\n\n"
+            except Exception as parse_err:
+                yield f"data: {json.dumps({'type': 'error', 'error': f'Failed to parse LLM output: {str(parse_err)}'})}\n\n"
+
+            yield "data: {\"type\": \"done\"}\n\n"
+
+        return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == '__main__':
