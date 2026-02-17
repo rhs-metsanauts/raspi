@@ -1,7 +1,10 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response, stream_with_context
 import requests
 import json
 import os
+from ollama import chat
+from pydantic import BaseModel
+from typing import Optional
 
 app = Flask(__name__)
 
@@ -11,6 +14,63 @@ DEFAULT_TIMEOUT = 35
 TRANSMISSION_MODE = "wifi"  # "wifi" or "lora"
 LORA_DESTINATION = 0  # Integer destination for LoRA
 LORA_MESSAGE_PATH = r"D:\message.json"  # Path where LoRA transmitter reads messages from
+OLLAMA_MODEL = "qwen3:0.6b"  # Ollama model for AI assistant
+
+# Load AI system prompt from markdown file
+_PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_system_prompt.md")
+with open(_PROMPT_PATH, "r", encoding="utf-8") as _f:
+    AI_SYSTEM_PROMPT = _f.read()
+
+# Load Robot.py and extract just the essential API documentation (not full source)
+_ROBOT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Robot.py")
+_ROBOT_API_DOCS = """
+## Rover Class API Reference
+
+```python
+rover = Rover()  # Initialize the rover
+
+# Movement Methods
+rover.forward(power, duration=None)     # power: 0.0-1.0, duration in seconds (None = continuous)
+rover.turn_left(power, duration=None)   # power: 0.0-1.0, duration in seconds
+rover.turn_right(power, duration=None)  # power: 0.0-1.0, duration in seconds
+rover.stop()                             # Stop all motors immediately
+rover.drive_instant(left, right)        # Set left/right motors (-1.0 to 1.0) continuously
+rover.drive(left, right, duration)      # Drive for duration seconds then stop
+
+# Suspension Positioning
+rover.setup_regular_position()  # Standard driving position: servos [90, 90, 150, 30]
+rover.setup_sun_position()      # Solar panel orientation: servos [150, 35, 90, 90]
+rover.set_servo_positions([a, b, c, d])  # Custom servo positions (0-180 degrees)
+
+# Camera
+rover.init_camera(camera_index=0)  # Initialize camera (call once before taking photos)
+rover.take_picture(filepath)       # Capture photo, saves to filepath.png, returns path
+
+# Cleanup
+rover.cleanup()  # MUST call at end of script to release GPIO resources
+```
+
+**Example Script:**
+```python
+from Robot import *
+import time
+
+rover = Rover()
+rover.setup_regular_position()
+rover.forward(0.7, duration=2)
+time.sleep(1)
+rover.turn_left(0.5, duration=1)
+rover.cleanup()
+```
+"""
+
+AI_SYSTEM_PROMPT += _ROBOT_API_DOCS
+
+
+class RoverCommand(BaseModel):
+    """Structured output the LLM must produce."""
+    type: str  # bash_command | edit_file | basic_action | read_file | read_image
+    fields: dict
 
 
 @app.route('/')
@@ -123,6 +183,88 @@ def config():
         "mode": TRANSMISSION_MODE,
         "lora_destination": LORA_DESTINATION
     })
+
+
+@app.route('/ai_command', methods=['POST'])
+def ai_command():
+    """Stream an LLM response that decides the command type and body."""
+    import time as pytime
+    request_start = pytime.time()
+    
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '')
+        history = data.get('history', [])
+        mode = data.get('mode', TRANSMISSION_MODE)
+
+        print(f"[AI] Request received at {pytime.time():.2f}, message length: {len(user_message)}, history items: {len(history)}")
+
+        if not user_message:
+            return jsonify({"success": False, "error": "No message provided"}), 400
+
+        # Build messages list: system prompt (with current mode), then history, then user msg
+        system_content = AI_SYSTEM_PROMPT + f"\n\n## Current Transmission Mode\nThe current mode is **{mode}**."
+        messages = [{"role": "system", "content": system_content}]
+        messages.extend(history)
+        messages.append({"role": "user", "content": user_message})
+
+        prompt_prep_time = pytime.time() - request_start
+        print(f"[AI] Prompt prepared in {prompt_prep_time:.2f}s, total context: ~{len(system_content) + sum(len(str(m)) for m in messages):,} chars")
+        print(f"[AI] Calling Ollama model: {OLLAMA_MODEL}")
+        ollama_start = pytime.time()
+
+        def generate():
+            """SSE generator that streams thinking + final JSON."""
+            thinking_buffer = ""
+            content_buffer = ""
+            in_thinking = False
+            first_chunk = True
+
+            stream = chat(
+                model=OLLAMA_MODEL,
+                messages=messages,
+                think=True,
+                stream=True,
+                format=RoverCommand.model_json_schema(),
+                options={'num_predict': 2000},  # Limit output length
+                keep_alive='1h',  # Keep model loaded for 1 hour to avoid startup delay
+            )
+
+            for chunk in stream:
+                if first_chunk:
+                    first_chunk = False
+                    elapsed = pytime.time() - ollama_start
+                    print(f"[AI] First chunk received from Ollama after {elapsed:.2f}s")
+                
+                # Thinking tokens
+                if chunk.message.thinking:
+                    if not in_thinking:
+                        in_thinking = True
+                        yield f"data: {json.dumps({'type': 'thinking_start'})}\n\n"
+                    thinking_buffer += chunk.message.thinking
+                    yield f"data: {json.dumps({'type': 'thinking', 'content': chunk.message.thinking})}\n\n"
+
+                # Content tokens (the actual JSON answer)
+                if chunk.message.content:
+                    if in_thinking:
+                        in_thinking = False
+                        yield f"data: {json.dumps({'type': 'thinking_end'})}\n\n"
+                    content_buffer += chunk.message.content
+                    yield f"data: {json.dumps({'type': 'content', 'content': chunk.message.content})}\n\n"
+
+            # Parse final structured result
+            try:
+                command = RoverCommand.model_validate_json(content_buffer)
+                yield f"data: {json.dumps({'type': 'result', 'command': command.model_dump()})}\n\n"
+            except Exception as parse_err:
+                yield f"data: {json.dumps({'type': 'error', 'error': f'Failed to parse LLM output: {str(parse_err)}'})}\n\n"
+
+            yield "data: {\"type\": \"done\"}\n\n"
+
+        return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == '__main__':
