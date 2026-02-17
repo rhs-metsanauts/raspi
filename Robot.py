@@ -22,10 +22,10 @@ class RockerBogie:
 
 class Drivebase:
     def __init__(self):
-        self.IN1 = 17
-        self.IN2 = 27
-        self.IN3 = 22
-        self.IN4 = 24
+        self.IN1 = 22 #17
+        self.IN2 = 24 #27
+        self.IN3 = 17 #22
+        self.IN4 = 27 #24
         GPIO.setmode(GPIO.BCM)
         GPIO.setup([self.IN1, self.IN2, self.IN3, self.IN4], GPIO.OUT)
         self.pwm1 = GPIO.PWM(self.IN1, 1000)
