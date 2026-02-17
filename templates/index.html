@@ -1076,6 +1076,9 @@
             const message = input.value.trim();
             if (!message) return;
 
+            console.log('[AI] Starting message send:', message.substring(0, 50) + '...');
+            const t0 = performance.now();
+
             // Show user message
             appendAiMsg(escapeHtml(message), 'user');
             input.value = '';
@@ -1094,6 +1097,9 @@
             let thinkingTimerEl = null;
 
             try {
+                const fetchStart = performance.now();
+                console.log('[AI] Initiating fetch to /ai_command at', (fetchStart - t0).toFixed(0), 'ms');
+                
                 const response = await fetch('/ai_command', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1103,6 +1109,9 @@
                         mode: currentMode
                     })
                 });
+
+                const fetchEnd = performance.now();
+                console.log('[AI] Fetch completed, starting stream at', (fetchEnd - t0).toFixed(0), 'ms');
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
@@ -1177,12 +1186,30 @@
                             case 'result': {
                                 lastAiCommand = evt.command;
                                 const cmd = evt.command;
-                                const nice = `Command Type: ${cmd.type}\n` +
-                                    Object.entries(cmd.fields || {}).map(([k, v]) =>
-                                        `${k}: ${v.length > 200 ? v.slice(0, 200) + '\u2026' : v}`
-                                    ).join('\n');
+                                
+                                // Format the command result nicely
+                                let displayHtml = `<div style="font-weight:600;color:#7cc0ff;margin-bottom:8px;">Command Type: ${escapeHtml(cmd.type)}</div>`;
+                                
+                                // Display fields
+                                Object.entries(cmd.fields || {}).forEach(([key, value]) => {
+                                    displayHtml += `<div style="margin-bottom:8px;">`;
+                                    displayHtml += `<div style="font-size:11px;color:#5aa9ff;text-transform:uppercase;margin-bottom:4px;">${escapeHtml(key)}</div>`;
+                                    
+                                    // Special formatting for code (action field)
+                                    if (key === 'action' && typeof value === 'string') {
+                                        // Display Python code with proper formatting
+                                        const codePreview = value.split('\n').slice(0, 8).join('\n');
+                                        const hasMore = value.split('\n').length > 8;
+                                        displayHtml += `<pre style="background:rgba(6,21,47,0.8);padding:8px;border-radius:4px;font-size:12px;overflow-x:auto;margin:0;">${escapeHtml(codePreview)}${hasMore ? '\n...' : ''}</pre>`;
+                                    } else {
+                                        // Regular field display
+                                        const preview = value.length > 200 ? value.slice(0, 200) + '…' : value;
+                                        displayHtml += `<div style="color:#dbe9ff;font-size:13px;">${escapeHtml(preview)}</div>`;
+                                    }
+                                    displayHtml += `</div>`;
+                                });
 
-                                const msgDiv = appendAiMsg(escapeHtml(nice), 'assistant');
+                                const msgDiv = appendAiMsg(displayHtml, 'assistant');
 
                                 // Autofill bar
                                 const bar = document.createElement('div');

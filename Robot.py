@@ -431,6 +431,7 @@ if __name__ == '__main__':
     rover = Rover()
     rover.setup_regular_position()  # Initialize rocker bogie to regular position
     rover.forward(0.5, duration=2)   # Drive forward
+    time.sleep(1)                    # Wait for a second
     rover.turn_left(0.5, duration=1) # Turn left
     rover.stop()                     # Stop motors
     print('hi')
