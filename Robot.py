@@ -203,6 +203,34 @@ class Camera:
         if self.camera is not None:
             self.camera.release()
 
+class LDR:
+    def __init__(self, resistor_pin=16, covered_threshold=8):
+        self.resistor_pin = resistor_pin
+        self.covered_threshold = covered_threshold
+        GPIO.setmode(GPIO.BOARD)
+    
+    def read_light_level(self):
+        """
+        Read the light level using the LDR sensor.
+        Lower values indicate more light, higher values indicate less light. 
+        """
+        GPIO.setup(self.resistor_pin, GPIO.OUT)
+        GPIO.output(self.resistor_pin, GPIO.LOW)
+        time.sleep(0.1)
+        
+        GPIO.setup(self.resistor_pin, GPIO.IN)
+        current_time = time.time()
+        
+        while GPIO.input(self.resistor_pin) == GPIO.LOW:
+            if time.time() - current_time > 0.2:
+                break
+        
+        diff = time.time() - current_time
+        return diff * 1000  # Return in milliseconds
+    
+    def is_covered(self):
+        light_level = self.read_light_level()
+        return light_level > self.covered_threshold
 
 class Rover:
     """
@@ -235,6 +263,7 @@ class Rover:
         """
         self.drivebase = Drivebase()
         self.rocker_bogie = RockerBogie()
+        self.ldr = LDR()
         self.camera = None  # Camera initialized on demand
     
     # ==================== Drivebase Methods ====================
@@ -425,6 +454,24 @@ class Rover:
         self.drivebase.cleanup()
         if self.camera is not None:
             self.camera.release()
+    
+    def read_light_level(self):
+        """
+        Read the current light level from the LDR sensor.
+        
+        Returns:
+            float: The light level in milliseconds. Higher values indicate less light.
+        """
+        return self.ldr.read_light_level()
+    
+    def is_light_covered(self):
+        """
+        Check if the LDR sensor is covered based on the light level.
+        
+        Returns:
+            bool: True if the light level indicates the sensor is covered, False otherwise.
+        """
+        return self.ldr.is_covered()
 
 
 if __name__ == '__main__':
