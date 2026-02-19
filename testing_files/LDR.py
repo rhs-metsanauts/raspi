@@ -3,9 +3,6 @@ import sys
 import RPi.GPIO as GPIO
 import time
 import matplotlib.pyplot as plt
-'''
-Plot the data in a graph using matplotlib - import
-'''
 
 GPIO.setmode(GPIO.BOARD)
 
