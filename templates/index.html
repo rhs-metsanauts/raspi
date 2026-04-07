@@ -1225,7 +1225,7 @@
                 .then(data => {
                     const dot = document.getElementById('mapStatusDot');
                     const txt = document.getElementById('mapStatusText');
-                    if (!dot) return;
+                    if (!dot || !txt) return;
                     if (data.connected) {
                         dot.className = 'map-status-dot connected';
                         txt.textContent = 'CONNECTED';
@@ -1236,8 +1236,14 @@
                 })
                 .catch(() => {});
         }
-        setInterval(_pollMapStatus, 3000);
+        const _mapStatusInterval = setInterval(_pollMapStatus, 3000);
         _pollMapStatus();  // immediate first check
+
+        window.addEventListener('beforeunload', () => {
+            clearInterval(_mapStatusInterval);
+            if (mapElapsedTimer) clearInterval(mapElapsedTimer);
+            closeMapSSE();
+        });
 
         let currentMode = 'wifi';
         let aiChatHistory = [];  // persisted across messages for context
