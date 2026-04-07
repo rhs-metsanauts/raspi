@@ -4,7 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NASA HERA Rover Control Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg: #070c16;
+            --surface: #0d1425;
+            --surface-2: #141e36;
+            --border: #1c2c48;
+            --border-bright: #2a3f63;
+            --blue: #5b9cf6;
+            --blue-soft: rgba(91, 156, 246, 0.07);
+            --blue-muted: rgba(91, 156, 246, 0.12);
+            --text: #ffffff;
+            --text-muted: #c8d8ec;
+            --ease: cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -12,166 +27,253 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background:
-                radial-gradient(circle at 15% 20%, rgba(65, 105, 225, 0.25) 0%, transparent 40%),
-                radial-gradient(circle at 80% 10%, rgba(30, 144, 255, 0.2) 0%, transparent 35%),
-                linear-gradient(160deg, #020817 0%, #071a3d 45%, #0a254d 100%);
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            font-size: 17px;
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 1px 1px, rgba(91, 156, 246, 0.04) 1px, transparent 0);
+            background-size: 28px 28px;
+            color: var(--text);
             min-height: 100vh;
-            padding: 20px;
-            color: #e6f0ff;
+            padding: 32px 16px;
         }
 
         .container {
-            max-width: 900px;
+            max-width: 880px;
             margin: 0 auto;
-            background: rgba(7, 24, 53, 0.92);
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 14px;
-            border: 1px solid rgba(124, 176, 255, 0.35);
-            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
             overflow: hidden;
-            backdrop-filter: blur(4px);
         }
 
         .header {
-            background: linear-gradient(165deg, #04122b 0%, #0b2a57 60%, #103b79 100%);
-            color: #f4f8ff;
-            padding: 28px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 32px;
             text-align: center;
-            border-bottom: 1px solid rgba(124, 176, 255, 0.3);
         }
 
         .nasa-logo {
-            width: 86px;
-            height: 71px;
+            width: 72px;
+            height: 60px;
             object-fit: contain;
-            margin-bottom: 14px;
-            filter: drop-shadow(0 0 12px rgba(90, 160, 255, 0.5));
+            margin-bottom: 16px;
         }
 
         .header h1 {
-            font-size: 30px;
-            letter-spacing: 0.6px;
-            margin-bottom: 8px;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            color: var(--text);
+            margin-bottom: 6px;
         }
 
         .header p {
-            opacity: 0.92;
             font-size: 14px;
-            color: #bfd6ff;
+            color: var(--text-muted);
+        }
+
+        .tech-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--blue);
+            display: block;
+            margin-bottom: 8px;
         }
 
         .content {
-            padding: 30px;
-            background: linear-gradient(180deg, rgba(8, 26, 56, 0.72) 0%, rgba(6, 19, 43, 0.9) 100%);
+            padding: 28px;
+            background: var(--bg);
         }
 
+        /* Mode Switcher */
+        .mode-switcher {
+            display: flex;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s var(--ease);
+            text-align: center;
+        }
+
+        .mode-btn:first-child {
+            border-right: 1px solid var(--border);
+        }
+
+        .mode-btn.active {
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .mode-btn:hover:not(.active) {
+            background: var(--blue-soft);
+            color: var(--text);
+        }
+
+        .mode-label {
+            display: block;
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 2px;
+            font-weight: 400;
+        }
+
+        /* Config sections */
         .config-section {
-            background: rgba(10, 37, 77, 0.62);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 25px;
-            border: 1px solid rgba(122, 173, 255, 0.25);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 16px;
+            transition: border-color 0.15s var(--ease);
+        }
+
+        .config-section:hover {
+            border-color: var(--border-bright);
         }
 
         .config-section label {
             display: block;
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 8px;
-            color: #dbe9ff;
+            color: var(--text-muted);
+            margin-bottom: 10px;
         }
 
         .config-section input {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #3a5f9a;
-            border-radius: 6px;
-            font-size: 14px;
-            background: #06152f;
-            color: #eaf2ff;
         }
 
+        /* Form groups */
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         .form-group label {
             display: block;
+            font-size: 13px;
             font-weight: 600;
+            color: var(--text-muted);
             margin-bottom: 8px;
-            color: #dbe9ff;
         }
 
-        .form-group select,
-        .form-group input,
-        .form-group textarea {
+        /* Inputs */
+        input, select, textarea {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #3a5f9a;
-            border-radius: 6px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'Space Grotesk', sans-serif;
+            padding: 10px 12px;
             font-size: 14px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            transition: border-color 0.3s, box-shadow 0.3s;
-            background: #06152f;
-            color: #eaf2ff;
+            transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
         }
 
-        .form-group select:focus,
-        .form-group input:focus,
-        .form-group textarea:focus {
+        input:focus, select:focus, textarea:focus {
             outline: none;
-            border-color: #7cc0ff;
-            box-shadow: 0 0 0 3px rgba(53, 128, 255, 0.2);
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(91, 156, 246, 0.15);
         }
 
-        .form-group textarea {
+        textarea {
             min-height: 120px;
             resize: vertical;
-            font-family: 'Courier New', monospace;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
         }
 
+        select {
+            cursor: pointer;
+        }
+
+        /* Dynamic fields container */
         .dynamic-fields {
-            background: rgba(10, 37, 77, 0.62);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
             padding: 20px;
-            border-radius: 10px;
             margin-bottom: 20px;
-            border: 1px solid rgba(122, 173, 255, 0.25);
+            transition: border-color 0.15s var(--ease);
         }
 
+        .dynamic-fields:hover {
+            border-color: var(--border-bright);
+        }
+
+        /* Buttons */
         .btn {
-            background: linear-gradient(135deg, #0d47a1 0%, #1565c0 55%, #1e88e5 100%);
-            color: #f4f8ff;
-            padding: 14px 30px;
-            border: 1px solid rgba(145, 201, 255, 0.45);
+            background: var(--blue);
+            color: #fff;
+            border: none;
             border-radius: 8px;
-            font-size: 16px;
+            padding: 13px 24px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             width: 100%;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(40, 118, 234, 0.4);
+            transform: scale(1.02);
+            box-shadow: 0 4px 24px rgba(91, 156, 246, 0.35);
         }
 
         .btn:active {
-            transform: translateY(0);
+            transform: scale(0.98);
         }
 
         .btn:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
 
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 13px 18px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s var(--ease);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        /* Response Section */
         .response-section {
-            margin-top: 25px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
             padding: 20px;
-            background: rgba(10, 37, 77, 0.62);
-            border-radius: 10px;
-            border: 1px solid rgba(122, 173, 255, 0.25);
+            margin-top: 20px;
             display: none;
         }
 
@@ -180,23 +282,28 @@
         }
 
         .response-section h3 {
-            margin-bottom: 15px;
-            color: #dbe9ff;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
         }
 
         .response-content {
-            background: #06152f;
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 4px solid #5aa9ff;
+            background: var(--bg);
+            padding: 14px;
+            border-radius: 8px;
+            border-left: 3px solid var(--blue);
         }
 
         .response-field {
-            background: rgba(10, 37, 77, 0.5);
-            border: 1px solid rgba(122, 173, 255, 0.25);
-            border-radius: 6px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
             padding: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .response-field.inline {
@@ -210,12 +317,13 @@
         }
 
         .field-label {
-            font-weight: 600;
-            color: #7cc0ff;
-            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            color: var(--blue);
+            font-size: 11px;
             text-transform: uppercase;
-            margin-bottom: 8px;
-            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            letter-spacing: 0.08em;
         }
 
         .field-label.inline {
@@ -224,12 +332,12 @@
         }
 
         .field-value {
-            color: #eaf2ff;
-            font-family: 'Courier New', monospace;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
             font-size: 13px;
             white-space: pre-wrap;
             word-wrap: break-word;
-            line-height: 1.5;
+            line-height: 1.55;
         }
 
         .field-value.inline {
@@ -249,24 +357,25 @@
             left: 0;
             right: 0;
             height: 40px;
-            background: linear-gradient(to bottom, transparent, rgba(6, 21, 47, 0.95));
+            background: linear-gradient(to bottom, transparent, var(--surface));
         }
 
         .expand-btn {
-            background: rgba(124, 192, 255, 0.15);
-            border: 1px solid rgba(124, 192, 255, 0.3);
-            color: #7cc0ff;
-            padding: 6px 12px;
-            border-radius: 4px;
+            background: var(--blue-soft);
+            border: 1px solid rgba(91, 156, 246, 0.2);
+            color: var(--blue);
+            padding: 5px 12px;
+            border-radius: 6px;
             font-size: 12px;
+            font-family: 'Space Grotesk', sans-serif;
             cursor: pointer;
             margin-top: 8px;
-            transition: all 0.2s;
+            transition: all 0.15s var(--ease);
         }
 
         .expand-btn:hover {
-            background: rgba(124, 192, 255, 0.25);
-            border-color: rgba(124, 192, 255, 0.5);
+            background: var(--blue-muted);
+            border-color: rgba(91, 156, 246, 0.35);
         }
 
         .image-container {
@@ -278,135 +387,88 @@
         .image-container img {
             max-width: 100%;
             height: auto;
-            border-radius: 6px;
-            border: 1px solid rgba(122, 173, 255, 0.3);
-        }
-
-        .response-content pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            margin: 0;
-            color: #eaf2ff;
+            border-radius: 8px;
+            border: 1px solid var(--border);
         }
 
         .success {
-            border-left-color: #2ecc71;
+            border-left-color: #34d399;
         }
 
         .error {
-            border-left-color: #ff4d6d;
+            border-left-color: #f87171;
         }
 
         .status-indicator {
             display: inline-block;
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            margin-right: 8px;
+            margin-right: 6px;
         }
 
         .status-online {
-            background: #28a745;
+            background: #34d399;
         }
 
         .status-offline {
-            background: #dc3545;
+            background: #f87171;
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
-        /* Mode Switcher */
-        .mode-switcher {
-            display: flex;
-            background: rgba(10, 37, 77, 0.62);
-            border-radius: 10px;
-            margin-bottom: 25px;
-            border: 1px solid rgba(122, 173, 255, 0.25);
-            overflow: hidden;
-        }
-
-        .mode-btn {
-            flex: 1;
-            padding: 14px 20px;
-            border: none;
-            background: transparent;
-            color: #7ca8d9;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.25s;
-            text-align: center;
-            position: relative;
-        }
-
-        .mode-btn:first-child {
-            border-right: 1px solid rgba(122, 173, 255, 0.25);
-        }
-
-        .mode-btn.active {
-            background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
-            color: #f4f8ff;
-        }
-
-        .mode-btn:hover:not(.active) {
-            background: rgba(124, 192, 255, 0.08);
-        }
-
-        .mode-label {
-            display: block;
-            font-size: 11px;
-            opacity: 0.7;
-            margin-top: 2px;
-            font-weight: 400;
-        }
-
-        /* ── AI Assistant ── */
+        /* AI Assistant Modal */
         .ai-fab {
             position: fixed;
             bottom: 28px;
             right: 28px;
-            width: 58px;
-            height: 58px;
+            width: 54px;
+            height: 54px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #0d47a1 0%, #1e88e5 100%);
-            border: 2px solid rgba(145, 201, 255, 0.5);
-            color: #f4f8ff;
-            font-size: 26px;
+            background: var(--blue);
+            border: none;
+            color: #fff;
+            font-size: 24px;
             cursor: pointer;
-            box-shadow: 0 6px 24px rgba(30, 100, 230, 0.5);
+            box-shadow: 0 6px 24px rgba(91, 156, 246, 0.4);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease);
         }
-        .ai-fab:hover { transform: scale(1.08); box-shadow: 0 8px 30px rgba(30, 100, 230, 0.65); }
+
+        .ai-fab:hover {
+            transform: scale(1.08);
+            box-shadow: 0 8px 30px rgba(91, 156, 246, 0.55);
+        }
 
         .ai-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(2, 8, 23, 0.7);
+            background: rgba(7, 12, 22, 0.8);
             z-index: 1001;
             display: none;
             align-items: center;
             justify-content: center;
         }
-        .ai-overlay.open { display: flex; }
+
+        .ai-overlay.open {
+            display: flex;
+        }
 
         .ai-modal {
             width: 520px;
             max-width: 94vw;
             max-height: 85vh;
-            background: rgba(7, 24, 53, 0.97);
-            border: 1px solid rgba(124, 176, 255, 0.4);
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 14px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
 
         .ai-modal-header {
@@ -414,18 +476,29 @@
             justify-content: space-between;
             align-items: center;
             padding: 16px 20px;
-            border-bottom: 1px solid rgba(124, 176, 255, 0.25);
+            border-bottom: 1px solid var(--border);
         }
-        .ai-modal-header h3 { font-size: 16px; color: #dbe9ff; }
+
+        .ai-modal-header h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
         .ai-close-btn {
             background: none;
             border: none;
-            color: #7ca8d9;
+            color: var(--text-muted);
             font-size: 22px;
             cursor: pointer;
             padding: 0 4px;
+            line-height: 1;
+            transition: color 0.15s;
         }
-        .ai-close-btn:hover { color: #f4f8ff; }
+
+        .ai-close-btn:hover {
+            color: var(--text);
+        }
 
         .ai-chat-log {
             flex: 1;
@@ -433,75 +506,89 @@
             padding: 16px 20px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
         }
+
+        .ai-chat-log::-webkit-scrollbar { width: 5px; }
+        .ai-chat-log::-webkit-scrollbar-track { background: transparent; }
+        .ai-chat-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
         .ai-msg {
             padding: 10px 14px;
             border-radius: 10px;
             font-size: 13px;
-            line-height: 1.5;
+            line-height: 1.55;
             max-width: 92%;
             white-space: pre-wrap;
             word-wrap: break-word;
         }
+
         .ai-msg.user {
             align-self: flex-end;
-            background: rgba(13, 71, 161, 0.55);
-            border: 1px solid rgba(124, 176, 255, 0.3);
-            color: #eaf2ff;
+            background: var(--blue-muted);
+            border: 1px solid rgba(91, 156, 246, 0.25);
+            color: var(--text);
         }
+
         .ai-msg.assistant {
             align-self: flex-start;
-            background: rgba(10, 37, 77, 0.7);
-            border: 1px solid rgba(122, 173, 255, 0.2);
-            color: #dbe9ff;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
         }
+
         .ai-msg.thinking {
-            font-style: italic;
-            color: #7ca8d9;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
             font-size: 12px;
+            font-style: italic;
         }
+
         .ai-msg.error {
-            border-left: 3px solid #ff4d6d;
-            color: #ff8fa3;
+            border-left: 3px solid #f87171;
+            color: #fca5a5;
         }
+
         .ai-msg .thinking-header {
             font-weight: 600;
             margin-bottom: 4px;
-            color: #5aa9ff;
+            color: var(--blue);
             font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.08em;
+            font-style: normal;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
+
         .thinking-timer {
             font-weight: 400;
             font-style: normal;
-            color: #7ca8d9;
+            color: var(--text-muted);
             font-size: 11px;
         }
+
         .ai-msg .thinking-body {
             max-height: 150px;
             overflow-y: auto;
-            position: relative;
             scrollbar-width: thin;
-            scrollbar-color: rgba(124,176,255,0.3) transparent;
+            scrollbar-color: var(--border) transparent;
         }
-        .ai-msg .thinking-body::-webkit-scrollbar { width: 5px; }
+
+        .ai-msg .thinking-body::-webkit-scrollbar { width: 4px; }
         .ai-msg .thinking-body::-webkit-scrollbar-track { background: transparent; }
-        .ai-msg .thinking-body::-webkit-scrollbar-thumb { background: rgba(124,176,255,0.3); border-radius: 4px; }
+        .ai-msg .thinking-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         .ai-msg .thinking-body.expanded { max-height: 400px; }
-        .ai-msg .thinking-body:not(.expanded) {
-            /* scrollable, no gradient overlay needed */
-        }
+
         .ai-msg .thinking-toggle {
             background: none;
             border: none;
-            color: #5aa9ff;
+            color: var(--blue);
             font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
             cursor: pointer;
             padding: 4px 0 0;
         }
@@ -509,81 +596,198 @@
         .ai-autofill-bar {
             display: flex;
             gap: 8px;
-            margin-top: 8px;
+            margin-top: 10px;
         }
+
         .ai-autofill-btn {
             padding: 6px 14px;
             border-radius: 6px;
             font-size: 12px;
             font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
             cursor: pointer;
-            border: 1px solid rgba(124, 176, 255, 0.35);
-            transition: all 0.2s;
+            transition: all 0.15s var(--ease);
         }
+
         .ai-autofill-btn.apply {
-            background: linear-gradient(135deg, #0d47a1, #1e88e5);
-            color: #f4f8ff;
+            background: var(--blue);
+            color: #fff;
+            border: none;
         }
-        .ai-autofill-btn.apply:hover { box-shadow: 0 4px 16px rgba(30, 100, 230, 0.4); }
+
+        .ai-autofill-btn.apply:hover {
+            box-shadow: 0 4px 16px rgba(91, 156, 246, 0.4);
+            transform: scale(1.02);
+        }
+
         .ai-autofill-btn.dismiss {
             background: transparent;
-            color: #7ca8d9;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        .ai-autofill-btn.dismiss:hover {
+            border-color: var(--border-bright);
+            color: var(--text);
         }
 
         .ai-input-bar {
             display: flex;
             gap: 8px;
             padding: 14px 20px;
-            border-top: 1px solid rgba(124, 176, 255, 0.25);
+            border-top: 1px solid var(--border);
         }
+
         .ai-input-bar textarea {
             flex: 1;
             resize: none;
-            padding: 10px 12px;
-            border: 1px solid #3a5f9a;
-            border-radius: 8px;
-            background: #06152f;
-            color: #eaf2ff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 13px;
             min-height: 42px;
             max-height: 120px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
         }
-        .ai-input-bar textarea:focus { outline: none; border-color: #7cc0ff; box-shadow: 0 0 0 3px rgba(53, 128, 255, 0.2); }
+
         .ai-send-btn {
             padding: 0 18px;
             border-radius: 8px;
-            background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%);
-            border: 1px solid rgba(145, 201, 255, 0.4);
-            color: #f4f8ff;
+            background: var(--blue);
+            border: none;
+            color: #fff;
             font-size: 15px;
             cursor: pointer;
-            transition: box-shadow 0.2s;
+            transition: box-shadow 0.15s var(--ease);
         }
-        .ai-send-btn:hover { box-shadow: 0 4px 16px rgba(30, 100, 230, 0.4); }
-        .ai-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .ai-send-btn:hover {
+            box-shadow: 0 4px 16px rgba(91, 156, 246, 0.4);
+        }
+
+        .ai-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
 
         .ai-clear-btn {
             background: none;
-            border: 1px solid rgba(255, 77, 109, 0.4);
-            color: #ff8fa3;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            color: #fca5a5;
             font-size: 12px;
+            font-family: 'Space Grotesk', sans-serif;
             padding: 4px 10px;
             border-radius: 6px;
             cursor: pointer;
+            transition: background 0.15s;
         }
-        .ai-clear-btn:hover { background: rgba(255, 77, 109, 0.12); }
+
+        .ai-clear-btn:hover {
+            background: rgba(248, 113, 113, 0.1);
+        }
+        /* ── Tab bar ── */
+        .tab-bar {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-bottom: 2px solid transparent;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
+        }
+        .tab-btn.active {
+            color: var(--blue);
+            border-bottom-color: var(--blue);
+        }
+        .tab-btn:hover:not(.active) {
+            color: var(--text);
+        }
+
+        /* ── Map tab ── */
+        .map-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            margin-bottom: 14px;
+        }
+        .map-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .map-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .map-status-dot.connected { background: #34d399; }
+        .map-status-dot.disconnected { background: #f87171; }
+
+        .map-canvas-wrap {
+            position: relative;
+            width: 100%;
+            height: 520px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: var(--bg);
+        }
+        #mapCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #minimapCanvas {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            width: 160px;
+            height: 160px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            pointer-events: none;
+        }
+        .map-stats {
+            display: flex;
+            gap: 24px;
+            padding: 12px 0 4px;
+        }
+        .map-stats .tech-label {
+            display: inline;
+            color: var(--text-muted);
+        }
+        .map-stats .tech-label span {
+            color: var(--blue);
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <img class="nasa-logo" src="https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg" alt="NASA Logo">
+            <span class="tech-label">Mission Control</span>
             <h1>Rover Command Panel</h1>
             <p>Send commands to a Rover</p>
         </div>
 
-        <div class="content">
+        <!-- Tab bar -->
+        <div class="tab-bar">
+            <button class="tab-btn active" id="tabCmdBtn" onclick="switchTab('commands')">Commands</button>
+            <button class="tab-btn" id="tabMapBtn" onclick="switchTab('map')">Map</button>
+        </div>
+
+        <!-- Commands tab -->
+        <div class="content" id="tab-commands">
             <!-- Mode Switcher -->
             <div class="mode-switcher">
                 <button class="mode-btn active" id="modeWifi" onclick="setMode('wifi')">
@@ -684,7 +888,7 @@
                 <button class="btn" id="sendBtn" onclick="sendCommand()" style="flex:1;">
                     Send Command
                 </button>
-                <button class="btn" id="aiBtn" onclick="openAiModal()" style="flex:0 0 auto;width:auto;padding:14px 22px;background:linear-gradient(135deg,#0d47a1,#1976d2,#1e88e5);">
+                <button class="btn-secondary" id="aiBtn" onclick="openAiModal()">
                     &#x2728; AI Assist
                 </button>
             </div>
@@ -695,7 +899,33 @@
                 <div class="response-content" id="responseContent">
                 </div>
             </div>
-        </div>
+        </div><!-- end #tab-commands -->
+
+        <!-- Map tab -->
+        <div id="tab-map" class="hidden" style="padding:28px;background:var(--bg);">
+            <div class="map-controls">
+                <div class="map-status">
+                    <span class="map-status-dot disconnected" id="mapStatusDot"></span>
+                    <span class="tech-label" id="mapStatusText">DISCONNECTED</span>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button class="btn" style="width:auto;padding:10px 20px;" onclick="startMapping()">Start</button>
+                    <button class="btn-secondary" onclick="stopMapping()">Stop</button>
+                    <button class="btn-secondary" onclick="clearMapping()">Clear</button>
+                </div>
+            </div>
+
+            <div class="map-canvas-wrap">
+                <canvas id="mapCanvas"></canvas>
+                <canvas id="minimapCanvas" width="160" height="160"></canvas>
+            </div>
+
+            <div class="map-stats">
+                <span class="tech-label">Points: <span id="mapPointCount">0</span></span>
+                <span class="tech-label">Coverage: <span id="mapCoverage">0.0</span> m²</span>
+                <span class="tech-label">Time: <span id="mapElapsed">00:00</span></span>
+            </div>
+        </div><!-- end #tab-map -->
     </div>
 
     <!-- AI Assistant Modal -->
@@ -721,6 +951,294 @@
     <button class="ai-fab" onclick="openAiModal()" title="AI Command Assistant">&#x2728;</button>
 
     <script>
+        /* ── Three.js map globals ── */
+        let threeScene, threeCamera, threeRenderer, threeControls;
+        let pointGeometry, positionArray, colorArray;
+        let pointCount = 0;
+        const MAX_POINTS = 600000;
+        let mapInitialised = false;
+
+        function initThreeJS() {
+            if (mapInitialised) return;
+            mapInitialised = true;
+
+            const canvas = document.getElementById('mapCanvas');
+            const wrap = canvas.parentElement;
+            const W = wrap.clientWidth;
+            const H = wrap.clientHeight;
+
+            // Scene
+            threeScene = new THREE.Scene();
+            threeScene.background = new THREE.Color(0x070c16);
+
+            // Camera
+            threeCamera = new THREE.PerspectiveCamera(60, W / H, 0.01, 1000);
+            threeCamera.position.set(0, 5, 8);
+            threeCamera.lookAt(0, 0, 0);
+
+            // Renderer
+            threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+            threeRenderer.setPixelRatio(window.devicePixelRatio);
+            threeRenderer.setSize(W, H);
+
+            // Orbit controls
+            threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
+            threeControls.enableDamping = true;
+            threeControls.dampingFactor = 0.05;
+
+            // Reference grid
+            const grid = new THREE.GridHelper(20, 40, 0x1c2c48, 0x1c2c48);
+            threeScene.add(grid);
+
+            // Axes (1m scale)
+            threeScene.add(new THREE.AxesHelper(1));
+
+            // Pre-allocate point cloud buffers
+            positionArray = new Float32Array(MAX_POINTS * 3);
+            colorArray = new Float32Array(MAX_POINTS * 3);
+            pointGeometry = new THREE.BufferGeometry();
+            pointGeometry.setAttribute('position', new THREE.BufferAttribute(positionArray, 3));
+            pointGeometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+            pointGeometry.setDrawRange(0, 0);
+
+            const pointMaterial = new THREE.PointsMaterial({
+                size: 0.03,
+                vertexColors: true,
+                sizeAttenuation: true,
+            });
+            threeScene.add(new THREE.Points(pointGeometry, pointMaterial));
+
+            // Resize handler
+            window.addEventListener('resize', () => {
+                if (document.getElementById('tab-map').classList.contains('hidden')) return;
+                const nW = wrap.clientWidth;
+                const nH = wrap.clientHeight;
+                threeCamera.aspect = nW / nH;
+                threeCamera.updateProjectionMatrix();
+                threeRenderer.setSize(nW, nH);
+            });
+
+            // Render loop (paused when Map tab is hidden)
+            function animate() {
+                requestAnimationFrame(animate);
+                if (!document.getElementById('tab-map').classList.contains('hidden')) {
+                    threeControls.update();
+                    threeRenderer.render(threeScene, threeCamera);
+                }
+            }
+            animate();
+        }
+
+        function switchTab(tab) {
+            const isMap = tab === 'map';
+            document.getElementById('tab-commands').classList.toggle('hidden', isMap);
+            document.getElementById('tab-map').classList.toggle('hidden', !isMap);
+            document.getElementById('tabCmdBtn').classList.toggle('active', !isMap);
+            document.getElementById('tabMapBtn').classList.toggle('active', isMap);
+            if (isMap) initThreeJS();
+        }
+
+        /* ── Map state ── */
+        let mapSSE = null;
+        let mapStartTime = null;
+        let mapElapsedTimer = null;
+        let mapMinX = Infinity, mapMaxX = -Infinity;
+        let mapMinZ = Infinity, mapMaxZ = -Infinity;
+
+        function appendPoints(points) {
+            if (!mapInitialised) return;
+            const available = MAX_POINTS - pointCount;
+            const batch = points.slice(0, available);
+            if (batch.length === 0) return;
+
+            for (let i = 0; i < batch.length; i++) {
+                const [x, y, z, r, g, b] = batch[i];
+                const base = (pointCount + i) * 3;
+                positionArray[base]     = x;
+                positionArray[base + 1] = y;
+                positionArray[base + 2] = z;
+                colorArray[base]     = r / 255;
+                colorArray[base + 1] = g / 255;
+                colorArray[base + 2] = b / 255;
+                if (x < mapMinX) mapMinX = x;
+                if (x > mapMaxX) mapMaxX = x;
+                if (z < mapMinZ) mapMinZ = z;
+                if (z > mapMaxZ) mapMaxZ = z;
+            }
+
+            pointCount += batch.length;
+            pointGeometry.setDrawRange(0, pointCount);
+            pointGeometry.attributes.position.needsUpdate = true;
+            pointGeometry.attributes.color.needsUpdate = true;
+
+            document.getElementById('mapPointCount').textContent = pointCount.toLocaleString();
+            const dx = Math.max(0.01, mapMaxX - mapMinX);
+            const dz = Math.max(0.01, mapMaxZ - mapMinZ);
+            document.getElementById('mapCoverage').textContent = (dx * dz).toFixed(1);
+        }
+
+        function resetPointCloud() {
+            if (!mapInitialised) return;
+            pointCount = 0;
+            pointGeometry.setDrawRange(0, 0);
+            pointGeometry.attributes.position.needsUpdate = true;
+            pointGeometry.attributes.color.needsUpdate = true;
+            mapMinX = Infinity; mapMaxX = -Infinity;
+            mapMinZ = Infinity; mapMaxZ = -Infinity;
+            document.getElementById('mapPointCount').textContent = '0';
+            document.getElementById('mapCoverage').textContent = '0.0';
+        }
+
+        function openMapSSE() {
+            if (mapSSE) return;
+            mapSSE = new EventSource('/map_stream');
+            mapSSE.onmessage = function(e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data.type === 'chunk') {
+                        appendPoints(data.points);
+                        updateMinimap(data.rover_pos);
+                    }
+                } catch (err) {
+                    console.warn('[Map] Chunk parse error:', err);
+                }
+            };
+            mapSSE.onerror = function() {
+                document.getElementById('mapStatusDot').className = 'map-status-dot disconnected';
+                document.getElementById('mapStatusText').textContent = 'DISCONNECTED';
+            };
+        }
+
+        function closeMapSSE() {
+            if (mapSSE) {
+                mapSSE.close();
+                mapSSE = null;
+            }
+        }
+
+        /* ── Minimap ── */
+        let roverPath = [];
+        const MINIMAP_SIZE = 160;
+
+        function updateMinimap(roverPos) {
+            const canvas = document.getElementById('minimapCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            roverPath.push([roverPos[0], roverPos[2]]);   // XZ plane
+
+            ctx.clearRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+            ctx.fillStyle = 'rgba(7,12,22,0.88)';
+            ctx.fillRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+
+            if (roverPath.length < 2) return;
+
+            const xs = roverPath.map(p => p[0]);
+            const zs = roverPath.map(p => p[1]);
+            const xMin = Math.min(...xs), xMax = Math.max(...xs);
+            const zMin = Math.min(...zs), zMax = Math.max(...zs);
+            const range = Math.max(xMax - xMin, zMax - zMin, 1);
+            const pad = 14;
+            const scale = (MINIMAP_SIZE - pad * 2) / range;
+
+            function toCanvas(x, z) {
+                return [pad + (x - xMin) * scale, pad + (z - zMin) * scale];
+            }
+
+            // Path line
+            ctx.strokeStyle = '#5b9cf6';
+            ctx.lineWidth = 1.5;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            const [sx, sy] = toCanvas(roverPath[0][0], roverPath[0][1]);
+            ctx.moveTo(sx, sy);
+            for (let i = 1; i < roverPath.length; i++) {
+                const [px, py] = toCanvas(roverPath[i][0], roverPath[i][1]);
+                ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            // Current rover position dot
+            const [rx, ry] = toCanvas(roverPos[0], roverPos[2]);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function resetMinimap() {
+            roverPath = [];
+            const canvas = document.getElementById('minimapCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+            }
+        }
+
+        /* ── Elapsed timer ── */
+        function _updateElapsed() {
+            if (!mapStartTime) return;
+            const s = Math.floor((Date.now() - mapStartTime) / 1000);
+            const mm = String(Math.floor(s / 60)).padStart(2, '0');
+            const ss = String(s % 60).padStart(2, '0');
+            document.getElementById('mapElapsed').textContent = `${mm}:${ss}`;
+        }
+
+        /* ── Map control buttons ── */
+        function startMapping() {
+            openMapSSE();
+            fetch('/map_control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: 'start'}),
+            }).catch(() => {});
+            mapStartTime = Date.now();
+            if (!mapElapsedTimer) mapElapsedTimer = setInterval(_updateElapsed, 1000);
+        }
+
+        function stopMapping() {
+            fetch('/map_control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: 'stop'}),
+            }).catch(() => {});
+            if (mapElapsedTimer) { clearInterval(mapElapsedTimer); mapElapsedTimer = null; }
+        }
+
+        function clearMapping() {
+            fetch('/map_control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: 'clear'}),
+            }).catch(() => {});
+            stopMapping();
+            resetPointCloud();
+            resetMinimap();
+            mapStartTime = null;
+            document.getElementById('mapElapsed').textContent = '00:00';
+        }
+
+        /* ── Status polling ── */
+        function _pollMapStatus() {
+            fetch('/map_status')
+                .then(r => r.json())
+                .then(data => {
+                    const dot = document.getElementById('mapStatusDot');
+                    const txt = document.getElementById('mapStatusText');
+                    if (!dot) return;
+                    if (data.connected) {
+                        dot.className = 'map-status-dot connected';
+                        txt.textContent = 'CONNECTED';
+                    } else {
+                        dot.className = 'map-status-dot disconnected';
+                        txt.textContent = 'DISCONNECTED';
+                    }
+                })
+                .catch(() => {});
+        }
+        setInterval(_pollMapStatus, 3000);
+        _pollMapStatus();  // immediate first check
+
         let currentMode = 'wifi';
         let aiChatHistory = [];  // persisted across messages for context
         let lastAiCommand = null; // most recent parsed command from LLM
@@ -748,18 +1266,18 @@
             document.getElementById('modeLora').classList.toggle('active', mode === 'lora');
             document.getElementById('wifiConfig').classList.toggle('hidden', mode !== 'wifi');
             document.getElementById('loraConfig').classList.toggle('hidden', mode !== 'lora');
-            
+
             // Update command type options based on mode
             const commandTypeSelect = document.getElementById('commandType');
             const currentValue = commandTypeSelect.value;
             const readFileOption = commandTypeSelect.querySelector('option[value="read_file"]');
             const readImageOption = commandTypeSelect.querySelector('option[value="read_image"]');
-            
+
             if (mode === 'lora') {
                 // Hide read options in LoRA mode
                 if (readFileOption) readFileOption.style.display = 'none';
                 if (readImageOption) readImageOption.style.display = 'none';
-                
+
                 // If currently on a read option, switch to bash_command
                 if (currentValue === 'read_file' || currentValue === 'read_image') {
                     commandTypeSelect.value = 'bash_command';
@@ -770,7 +1288,7 @@
                 if (readFileOption) readFileOption.style.display = '';
                 if (readImageOption) readImageOption.style.display = '';
             }
-            
+
             updateConfig();
         }
 
@@ -808,12 +1326,12 @@
         // Handle command type change
         document.getElementById('commandType').addEventListener('change', function() {
             const selectedType = this.value;
-            
+
             // Hide all field groups
             document.querySelectorAll('.field-group').forEach(group => {
                 group.classList.add('hidden');
             });
-            
+
             // Show selected field group
             document.getElementById('fields_' + selectedType).classList.remove('hidden');
         });
@@ -822,7 +1340,7 @@
         function displayResponse(data, isError = false) {
             const responseContent = document.getElementById('responseContent');
             responseContent.innerHTML = '';
-            
+
             if (isError) {
                 responseContent.classList.remove('success');
                 responseContent.classList.add('error');
@@ -830,35 +1348,35 @@
                 responseContent.classList.remove('error');
                 responseContent.classList.add('success');
             }
-            
+
             // Create field boxes for each key-value pair
             Object.entries(data).forEach(([key, value]) => {
                 const fieldBox = document.createElement('div');
                 fieldBox.className = 'response-field';
-                
+
                 const label = document.createElement('div');
                 label.className = 'field-label';
                 label.textContent = key;
-                
+
                 // Special handling for image data
                 if (key === 'image_data' && data.mime_type) {
                     const imageContainer = document.createElement('div');
                     imageContainer.className = 'image-container';
-                    
+
                     const img = document.createElement('img');
                     img.src = `data:${data.mime_type};base64,${value}`;
                     img.alt = data.file_name || 'Image';
-                    
+
                     fieldBox.appendChild(label);
                     imageContainer.appendChild(img);
                     fieldBox.appendChild(imageContainer);
                     responseContent.appendChild(fieldBox);
                     return;
                 }
-                
+
                 const valueDiv = document.createElement('div');
                 valueDiv.className = 'field-value';
-                
+
                 // Format the value
                 let formattedValue;
                 if (typeof value === 'object') {
@@ -869,25 +1387,25 @@
                 } else {
                     formattedValue = String(value);
                 }
-                
+
                 valueDiv.textContent = formattedValue;
-                
+
                 // Check if content is more than 5 lines
                 const lineCount = formattedValue.split('\n').length;
-                
+
                 if (lineCount === 1) {
                     // Single line - display inline
                     fieldBox.classList.add('inline');
                     label.classList.add('inline');
                     valueDiv.classList.add('inline');
                     label.textContent = key + ':';
-                    
+
                     fieldBox.appendChild(label);
                     fieldBox.appendChild(valueDiv);
                 } else if (lineCount > 5) {
                     // Multi-line with collapse
                     valueDiv.classList.add('collapsed');
-                    
+
                     const expandBtn = document.createElement('button');
                     expandBtn.className = 'expand-btn';
                     expandBtn.textContent = 'Show More';
@@ -900,7 +1418,7 @@
                             expandBtn.textContent = 'Show More';
                         }
                     };
-                    
+
                     fieldBox.appendChild(label);
                     fieldBox.appendChild(valueDiv);
                     fieldBox.appendChild(expandBtn);
@@ -909,7 +1427,7 @@
                     fieldBox.appendChild(label);
                     fieldBox.appendChild(valueDiv);
                 }
-                
+
                 responseContent.appendChild(fieldBox);
             });
         }
@@ -920,15 +1438,15 @@
             const btn = document.getElementById('sendBtn');
             const responseSection = document.getElementById('responseSection');
             const statusIndicator = document.getElementById('statusIndicator');
-            
+
             // Build payload based on command type
-            let payload = { 
+            let payload = {
                 type: commandType,
                 mode: currentMode,
                 timeout: parseInt(document.getElementById('timeout').value),
                 lora_destination: parseInt(document.getElementById('loraDestination').value)
             };
-            
+
             switch(commandType) {
                 case 'bash_command':
                     payload.command = document.getElementById('command').value;
@@ -937,7 +1455,7 @@
                         return;
                     }
                     break;
-                
+
                 case 'edit_file':
                     payload.file_name = document.getElementById('edit_file_name').value;
                     payload.file_content = document.getElementById('file_content').value;
@@ -946,7 +1464,7 @@
                         return;
                     }
                     break;
-                
+
                 case 'basic_action':
                     payload.action = document.getElementById('action').value;
                     if (!payload.action) {
@@ -954,7 +1472,7 @@
                         return;
                     }
                     break;
-                
+
                 case 'read_file':
                     payload.file_name = document.getElementById('read_file_name').value;
                     if (!payload.file_name) {
@@ -962,7 +1480,7 @@
                         return;
                     }
                     break;
-                
+
                 case 'read_image':
                     payload.file_name = document.getElementById('image_file_name').value;
                     if (!payload.file_name) {
@@ -971,11 +1489,11 @@
                     }
                     break;
             }
-            
+
             // Disable button and show loading state
             btn.disabled = true;
             btn.textContent = 'Sending...';
-            
+
             try {
                 const response = await fetch('/send_command', {
                     method: 'POST',
@@ -984,12 +1502,12 @@
                     },
                     body: JSON.stringify(payload)
                 });
-                
+
                 const result = await response.json();
-                
+
                 // Show response
                 responseSection.classList.add('show');
-                
+
                 if (result.success) {
                     displayResponse(result.data, false);
                     statusIndicator.classList.remove('status-offline');
@@ -1099,7 +1617,7 @@
             try {
                 const fetchStart = performance.now();
                 console.log('[AI] Initiating fetch to /ai_command at', (fetchStart - t0).toFixed(0), 'ms');
-                
+
                 const response = await fetch('/ai_command', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1186,25 +1704,25 @@
                             case 'result': {
                                 lastAiCommand = evt.command;
                                 const cmd = evt.command;
-                                
+
                                 // Format the command result nicely
-                                let displayHtml = `<div style="font-weight:600;color:#7cc0ff;margin-bottom:8px;">Command Type: ${escapeHtml(cmd.type)}</div>`;
-                                
+                                let displayHtml = `<div style="font-weight:600;color:var(--blue);margin-bottom:8px;">Command Type: ${escapeHtml(cmd.type)}</div>`;
+
                                 // Display fields
                                 Object.entries(cmd.fields || {}).forEach(([key, value]) => {
                                     displayHtml += `<div style="margin-bottom:8px;">`;
-                                    displayHtml += `<div style="font-size:11px;color:#5aa9ff;text-transform:uppercase;margin-bottom:4px;">${escapeHtml(key)}</div>`;
-                                    
+                                    displayHtml += `<div style="font-size:11px;color:var(--blue);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">${escapeHtml(key)}</div>`;
+
                                     // Special formatting for code (action field)
                                     if (key === 'action' && typeof value === 'string') {
                                         // Display Python code with proper formatting
                                         const codePreview = value.split('\n').slice(0, 8).join('\n');
                                         const hasMore = value.split('\n').length > 8;
-                                        displayHtml += `<pre style="background:rgba(6,21,47,0.8);padding:8px;border-radius:4px;font-size:12px;overflow-x:auto;margin:0;">${escapeHtml(codePreview)}${hasMore ? '\n...' : ''}</pre>`;
+                                        displayHtml += `<pre style="background:var(--bg);padding:8px;border-radius:6px;font-size:12px;font-family:'JetBrains Mono',monospace;overflow-x:auto;margin:0;border:1px solid var(--border);">${escapeHtml(codePreview)}${hasMore ? '\n...' : ''}</pre>`;
                                     } else {
                                         // Regular field display
                                         const preview = value.length > 200 ? value.slice(0, 200) + '…' : value;
-                                        displayHtml += `<div style="color:#dbe9ff;font-size:13px;">${escapeHtml(preview)}</div>`;
+                                        displayHtml += `<div style="color:var(--text-muted);font-size:13px;">${escapeHtml(preview)}</div>`;
                                     }
                                     displayHtml += `</div>`;
                                 });
