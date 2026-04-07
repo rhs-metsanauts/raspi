@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import json
 import pytest
-import queue
+import FlaskServer as _fs
 from FlaskServer import app, _sse_clients, _sse_lock
 
 
@@ -15,6 +15,17 @@ def client():
     app.config["TESTING"] = True
     with app.test_client() as c:
         yield c
+
+
+@pytest.fixture(autouse=True)
+def reset_map_state():
+    _fs._map_point_count = 0
+    _fs._map_seq = -1
+    _fs._jetson_ws_connected = False
+    yield
+    _fs._map_point_count = 0
+    _fs._map_seq = -1
+    _fs._jetson_ws_connected = False
 
 
 class TestMapStatus:
@@ -45,20 +56,18 @@ class TestMapControl:
         assert r.status_code == 503
 
     def test_clear_resets_point_count(self, client):
-        import FlaskServer
-        FlaskServer._map_point_count = 42
+        _fs._map_point_count = 42
         client.post('/map_control',
                     data=json.dumps({'action': 'clear'}),
                     content_type='application/json')
-        assert FlaskServer._map_point_count == 0
+        assert _fs._map_point_count == 0
 
     def test_clear_resets_seq(self, client):
-        import FlaskServer
-        FlaskServer._map_seq = 10
+        _fs._map_seq = 10
         client.post('/map_control',
                     data=json.dumps({'action': 'clear'}),
                     content_type='application/json')
-        assert FlaskServer._map_seq == -1
+        assert _fs._map_seq == -1
 
 
 class TestConfig:
