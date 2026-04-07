@@ -5,16 +5,29 @@ import os
 from ollama import chat
 from pydantic import BaseModel
 from typing import Optional
+import threading
+import queue
+import time
+import websocket as ws_client   # websocket-client package
 
 app = Flask(__name__)
 
 # Configuration
-FASTAPI_SERVER_URL = "http://localhost:8000/execute"
+FASTAPI_SERVER_URL = "http://192.168.137.104:8000/execute"
 DEFAULT_TIMEOUT = 35
 TRANSMISSION_MODE = "wifi"  # "wifi" or "lora"
 LORA_DESTINATION = 0  # Integer destination for LoRA
 LORA_MESSAGE_PATH = r"D:\message.json"  # Path where LoRA transmitter reads messages from
 OLLAMA_MODEL = "qwen3:0.6b"  # Ollama model for AI assistant
+
+# ── 3D Mapping globals ────────────────────────────────────────────────────────
+JETSON_WS_URL = "ws://192.168.1.100:9001"   # Set via /config in the UI
+_sse_clients: list[queue.Queue] = []         # One queue per open SSE connection
+_sse_lock = threading.Lock()
+_jetson_ws_connected = False
+_jetson_ws_handle = None                     # websocket.WebSocketApp instance
+_map_point_count = 0
+_map_seq = -1
 
 # Load AI system prompt from markdown file
 _PROMPT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_system_prompt.md")
@@ -65,6 +78,64 @@ rover.cleanup()
 """
 
 AI_SYSTEM_PROMPT += _ROBOT_API_DOCS
+
+
+def _broadcast_to_sse(message: str):
+    """Push a raw JSON string to every open SSE client queue."""
+    with _sse_lock:
+        for q in list(_sse_clients):
+            try:
+                q.put_nowait(message)
+            except queue.Full:
+                pass  # slow client — skip this chunk
+
+
+def _jetson_ws_thread():
+    """Background thread: maintains WebSocket connection to Jetson mapper."""
+    global _jetson_ws_connected, _jetson_ws_handle, _map_point_count, _map_seq
+
+    while True:
+        try:
+            def on_message(ws, message):
+                global _map_point_count, _map_seq
+                try:
+                    data = json.loads(message)
+                    if data.get("type") == "chunk":
+                        _map_point_count += len(data.get("points", []))
+                        _map_seq = data.get("seq", _map_seq)
+                    _broadcast_to_sse(message)
+                except Exception:
+                    pass
+
+            def on_open(ws):
+                global _jetson_ws_connected, _jetson_ws_handle
+                _jetson_ws_connected = True
+                _jetson_ws_handle = ws
+                print("[Map] Connected to Jetson mapper")
+
+            def on_close(ws, code, msg):
+                global _jetson_ws_connected, _jetson_ws_handle
+                _jetson_ws_connected = False
+                _jetson_ws_handle = None
+                print("[Map] Disconnected from Jetson mapper")
+
+            def on_error(ws, error):
+                global _jetson_ws_connected
+                _jetson_ws_connected = False
+                print(f"[Map] WebSocket error: {error}")
+
+            app_ws = ws_client.WebSocketApp(
+                JETSON_WS_URL,
+                on_message=on_message,
+                on_open=on_open,
+                on_close=on_close,
+                on_error=on_error,
+            )
+            app_ws.run_forever()
+        except Exception as exc:
+            print(f"[Map] Connection attempt failed: {exc}")
+
+        time.sleep(5)   # retry delay before reconnecting
 
 
 class RoverCommand(BaseModel):
@@ -266,6 +337,11 @@ def ai_command():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+# Start Jetson WS client in background (only when not testing)
+if not os.environ.get("TESTING"):
+    _map_thread = threading.Thread(target=_jetson_ws_thread, daemon=True)
+    _map_thread.start()
 
 if __name__ == '__main__':
     os.makedirs('templates', exist_ok=True)
