@@ -15,6 +15,9 @@ try:
 except ImportError:
     ZED_AVAILABLE = False
 
+import websockets
+import websockets.exceptions
+
 VOXEL_SIZE = 0.05   # metres — 5 cm grid
 WS_PORT = 9001
 UPDATE_HZ = 2
@@ -123,10 +126,6 @@ class VoxelTracker:
         self._sent.clear()
 
 
-import websockets
-import websockets.exceptions
-
-
 class ZedMapper:
     """
     Runs the ZED SDK spatial mapping loop and streams incremental point
@@ -157,7 +156,9 @@ class ZedMapper:
             raise RuntimeError(f"ZED open failed: {status}")
 
         tracking_params = sl.PositionalTrackingParameters()
-        self.zed.enable_positional_tracking(tracking_params)
+        status = self.zed.enable_positional_tracking(tracking_params)
+        if status != sl.ERROR_CODE.SUCCESS:
+            raise RuntimeError(f"enable_positional_tracking failed: {status}")
 
         mapping_params = sl.SpatialMappingParameters(
             resolution_meter=VOXEL_SIZE,
@@ -167,7 +168,9 @@ class ZedMapper:
             save_texture=False,
             use_chunk_only=True,
         )
-        self.zed.enable_spatial_mapping(mapping_params)
+        status = self.zed.enable_spatial_mapping(mapping_params)
+        if status != sl.ERROR_CODE.SUCCESS:
+            raise RuntimeError(f"enable_spatial_mapping failed: {status}")
         print("[ZedMapper] ZED 2i initialised, spatial mapping enabled")
 
     def _get_rover_pos(self) -> list:
@@ -197,10 +200,13 @@ class ZedMapper:
     async def _broadcast(self, message: str):
         if not self.clients:
             return
-        await asyncio.gather(
+        results = await asyncio.gather(
             *[ws.send(message) for ws in list(self.clients)],
             return_exceptions=True,
         )
+        for ws, result in zip(list(self.clients), results):
+            if isinstance(result, Exception):
+                self.clients.discard(ws)
 
     async def _handle_client(self, websocket, path=""):
         self.clients.add(websocket)
