@@ -24,6 +24,7 @@ OLLAMA_MODEL = "qwen3:0.6b"  # Ollama model for AI assistant
 JETSON_WS_URL = "ws://192.168.1.100:9001"   # Set via /config in the UI
 _sse_clients: list[queue.Queue] = []         # One queue per open SSE connection
 _sse_lock = threading.Lock()
+_jetson_ws_lock = threading.Lock()
 _jetson_ws_connected = False
 _jetson_ws_handle = None                     # websocket.WebSocketApp instance
 _map_point_count = 0
@@ -109,19 +110,22 @@ def _jetson_ws_thread():
 
             def on_open(ws):
                 global _jetson_ws_connected, _jetson_ws_handle
-                _jetson_ws_connected = True
-                _jetson_ws_handle = ws
+                with _jetson_ws_lock:
+                    _jetson_ws_connected = True
+                    _jetson_ws_handle = ws
                 print("[Map] Connected to Jetson mapper")
 
             def on_close(ws, code, msg):
                 global _jetson_ws_connected, _jetson_ws_handle
-                _jetson_ws_connected = False
-                _jetson_ws_handle = None
+                with _jetson_ws_lock:
+                    _jetson_ws_connected = False
+                    _jetson_ws_handle = None
                 print("[Map] Disconnected from Jetson mapper")
 
             def on_error(ws, error):
                 global _jetson_ws_connected
-                _jetson_ws_connected = False
+                with _jetson_ws_lock:
+                    _jetson_ws_connected = False
                 print(f"[Map] WebSocket error: {error}")
 
             app_ws = ws_client.WebSocketApp(
@@ -305,9 +309,13 @@ def map_control():
         _map_point_count = 0
         _map_seq = -1
 
-    if _jetson_ws_connected and _jetson_ws_handle:
+    with _jetson_ws_lock:
+        connected = _jetson_ws_connected
+        handle = _jetson_ws_handle
+
+    if connected and handle:
         try:
-            _jetson_ws_handle.send(json.dumps({"action": action}))
+            handle.send(json.dumps({"action": action}))
             return jsonify({"success": True, "action": action})
         except Exception as exc:
             return jsonify({"success": False, "error": str(exc)}), 500
