@@ -1188,6 +1188,46 @@
             document.getElementById('mapElapsed').textContent = '00:00';
         }
 
+        /* ── System health (top bar) ── */
+        let _roverOnline = false;
+
+        function _setRoverStatus(online) {
+            _roverOnline = online;
+            const rDot  = document.getElementById('roverStatusDot');
+            const rTxt  = document.getElementById('roverStatusText');
+            const rCard = document.getElementById('roverCard');
+            const trDot = document.getElementById('telemRoverDot');
+            const trTxt = document.getElementById('telemRoverText');
+            if (rDot && rTxt) {
+                rDot.className = online ? 'status-dot green' : 'status-dot red';
+                rTxt.className = online ? 'val green' : 'val red';
+                rTxt.textContent = online ? 'Online' : 'Error';
+            }
+            if (rCard) rCard.classList.toggle('offline', !online);
+            if (trDot && trTxt) {
+                trDot.className = online ? 'status-dot green' : 'status-dot red';
+                trTxt.className = online ? 'telem-val green' : 'telem-val red';
+                trTxt.textContent = online ? 'Online' : 'Error';
+            }
+            _updateSystemHealth(document.getElementById('jetsonStatusDot')?.classList.contains('green') ?? false);
+        }
+
+        function _updateSystemHealth(jetsonConnected) {
+            const dot = document.getElementById('topBarDot');
+            const txt = document.getElementById('topBarStatusText');
+            if (!dot || !txt) return;
+            if (_roverOnline && jetsonConnected) {
+                dot.className = 'health-dot green';
+                txt.textContent = 'SYSTEMS NOMINAL';
+            } else if (_roverOnline || jetsonConnected) {
+                dot.className = 'health-dot yellow';
+                txt.textContent = 'PARTIAL';
+            } else {
+                dot.className = 'health-dot red';
+                txt.textContent = 'NO SIGNAL';
+            }
+        }
+
         /* ── Status polling ── */
         function _pollMapStatus() {
             fetch('/map_status')
@@ -1196,6 +1236,8 @@
                     const dot = document.getElementById('mapStatusDot');
                     const txt = document.getElementById('mapStatusText');
                     if (!dot || !txt) return;
+
+                    // Map tab status dot
                     if (data.connected) {
                         dot.className = 'map-status-dot connected';
                         txt.textContent = 'CONNECTED';
@@ -1203,6 +1245,45 @@
                         dot.className = 'map-status-dot disconnected';
                         txt.textContent = 'DISCONNECTED';
                     }
+
+                    // Jetson device card
+                    const jDot  = document.getElementById('jetsonStatusDot');
+                    const jTxt  = document.getElementById('jetsonStatusText');
+                    const jPts  = document.getElementById('jetsonPointsText');
+                    const jCard = document.getElementById('jetsonCard');
+                    if (jDot && jTxt && jCard) {
+                        if (data.connected) {
+                            jDot.className  = 'status-dot green';
+                            jTxt.className  = 'val green';
+                            jTxt.textContent = 'Connected';
+                            jCard.classList.remove('offline');
+                        } else {
+                            jDot.className  = 'status-dot red';
+                            jTxt.className  = 'val red';
+                            jTxt.textContent = 'Offline';
+                            jCard.classList.add('offline');
+                        }
+                    }
+                    if (jPts) jPts.textContent = (data.point_count || 0).toLocaleString();
+
+                    // Telemetry bar — mapper + points
+                    const tmDot = document.getElementById('telemMapperDot');
+                    const tmTxt = document.getElementById('telemMapperText');
+                    const tPts  = document.getElementById('telemPoints');
+                    if (tmDot && tmTxt) {
+                        if (data.connected) {
+                            tmDot.className  = 'status-dot green';
+                            tmTxt.className  = 'telem-val green';
+                            tmTxt.textContent = 'Connected';
+                        } else {
+                            tmDot.className  = 'status-dot red';
+                            tmTxt.className  = 'telem-val red';
+                            tmTxt.textContent = 'Offline';
+                        }
+                    }
+                    if (tPts) tPts.textContent = (data.point_count || 0).toLocaleString();
+
+                    _updateSystemHealth(data.connected);
                 })
                 .catch(() => {});
         }
@@ -1265,6 +1346,11 @@
                 if (readImageOption) readImageOption.style.display = '';
             }
 
+            // Sync rover card mode text and telemetry badge
+            const rMode = document.getElementById('roverModeText');
+            if (rMode) { rMode.textContent = mode === 'wifi' ? 'WiFi' : 'LoRa'; rMode.className = mode === 'wifi' ? 'val blue' : 'val'; }
+            const badge = document.getElementById('telemModeBadge');
+            if (badge) { badge.textContent = mode === 'wifi' ? 'WiFi' : 'LoRa'; badge.className = mode === 'wifi' ? 'mode-badge' : 'mode-badge lora'; }
             updateConfig();
         }
 
@@ -1289,13 +1375,44 @@
             });
         }
 
+        function saveConfig() {
+            const host = document.getElementById('serverUrl').value;
+            const fullUrl = buildFullUrl(host);
+            const jetsonWs = document.getElementById('jetsonWsUrl').value;
+            fetch('/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    server_url: fullUrl,
+                    timeout: parseInt(document.getElementById('timeout').value),
+                    mode: currentMode,
+                    lora_destination: parseInt(document.getElementById('loraDestination').value),
+                    jetson_ws_url: jetsonWs || undefined
+                })
+            }).then(() => {
+                const btn = document.querySelector('.config-save-btn');
+                if (btn) { btn.textContent = 'Saved ✓'; setTimeout(() => { btn.textContent = 'Save Config'; }, 1500); }
+                // Update jetson address display
+                const jWs = document.getElementById('jetsonWsText');
+                if (jWs && jetsonWs) jWs.textContent = jetsonWs.replace('ws://', '').split(':')[0] + ':9001';
+            });
+        }
+
         // Load current configuration
         fetch('/config')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('serverUrl').value = extractHostname(data.server_url);
+                const host = extractHostname(data.server_url);
+                document.getElementById('serverUrl').value = host;
                 document.getElementById('timeout').value = data.timeout;
                 document.getElementById('loraDestination').value = data.lora_destination || 0;
+                if (data.jetson_ws_url) {
+                    document.getElementById('jetsonWsUrl').value = data.jetson_ws_url;
+                    const jWs = document.getElementById('jetsonWsText');
+                    if (jWs) jWs.textContent = data.jetson_ws_url.replace('ws://', '').split('/')[0];
+                }
+                const rAddr = document.getElementById('roverAddressText');
+                if (rAddr) rAddr.textContent = host;
                 if (data.mode) setMode(data.mode);
             });
 
@@ -1488,16 +1605,19 @@
                     displayResponse(result.data, false);
                     statusIndicator.classList.remove('status-offline');
                     statusIndicator.classList.add('status-online');
+                    _setRoverStatus(true);
                 } else {
                     displayResponse({ error: result.error }, true);
                     statusIndicator.classList.remove('status-online');
                     statusIndicator.classList.add('status-offline');
+                    _setRoverStatus(false);
                 }
             } catch (error) {
                 responseSection.classList.add('show');
                 displayResponse({ error: error.message }, true);
                 statusIndicator.classList.remove('status-online');
                 statusIndicator.classList.add('status-offline');
+                _setRoverStatus(false);
             } finally {
                 // Re-enable button
                 btn.disabled = false;
