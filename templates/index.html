@@ -655,167 +655,254 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <img class="nasa-logo" src="https://upload.wikimedia.org/wikipedia/commons/e/e5/NASA_logo.svg" alt="NASA Logo">
-            <span class="tech-label">Mission Control</span>
-            <h1>Rover Command Panel</h1>
-            <p>Send commands to a Rover</p>
+
+    <!-- Top bar -->
+    <div class="top-bar">
+        <div class="top-bar-logo">
+            <span class="top-bar-title">🚀 HERA Rover Command Center</span>
+            <span class="top-bar-sub">METSAnauts Mission Control</span>
         </div>
-
-        <!-- Tab bar -->
-        <div class="tab-bar">
-            <button class="tab-btn active" id="tabCmdBtn" onclick="switchTab('commands')">Commands</button>
-            <button class="tab-btn" id="tabMapBtn" onclick="switchTab('map')">Map</button>
+        <div class="top-bar-spacer"></div>
+        <div class="system-health">
+            <span class="health-dot" id="topBarDot"></span>
+            <span id="topBarStatusText" style="font-size:11px;">STANDBY</span>
         </div>
+    </div>
 
-        <!-- Commands tab -->
-        <div class="content" id="tab-commands">
-            <!-- Mode Switcher -->
-            <div class="mode-switcher">
-                <button class="mode-btn active" id="modeWifi" onclick="setMode('wifi')">
-                    WiFi
-                    <span class="mode-label">Send via network</span>
-                </button>
-                <button class="mode-btn" id="modeLora" onclick="setMode('lora')">
-                    LoRA
-                    <span class="mode-label">Send via radio</span>
-                </button>
+    <!-- Main area: viewport (left) + right panel -->
+    <div class="main-area">
+
+        <!-- Left: main viewport with tabs -->
+        <div class="main-viewport">
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tabCmdBtn" onclick="switchTab('commands')">Commands</button>
+                <button class="tab-btn" id="tabMapBtn" onclick="switchTab('map')">Map</button>
             </div>
 
-            <!-- WiFi Configuration -->
-            <div id="wifiConfig">
-                <div class="config-section">
-                    <label for="serverUrl">
-                        <span class="status-indicator status-offline" id="statusIndicator"></span>
-                        Rover Server Host (e.g., localhost or IP address)
-                    </label>
-                    <input type="text" id="serverUrl" value="localhost" placeholder="localhost or 192.168.x.x">
+            <!-- Commands tab -->
+            <div class="viewport-content" id="tab-commands">
+                <!-- Mode Switcher -->
+                <div class="mode-switcher">
+                    <button class="mode-btn active" id="modeWifi" onclick="setMode('wifi')">
+                        📡 WiFi
+                        <span class="mode-label">Send via network</span>
+                    </button>
+                    <button class="mode-btn" id="modeLora" onclick="setMode('lora')">
+                        📻 LoRa
+                        <span class="mode-label">Send via radio</span>
+                    </button>
                 </div>
 
-                <div class="config-section">
-                    <label for="timeout">Request Timeout (seconds)</label>
-                    <input type="number" id="timeout" value="35" min="1" max="300">
+                <!-- Command Type Selection -->
+                <div class="form-group">
+                    <label for="commandType">Command Type</label>
+                    <select id="commandType">
+                        <option value="bash_command">Bash Command</option>
+                        <option value="edit_file">Edit File</option>
+                        <option value="basic_action">Python Action</option>
+                        <option value="read_file">Read File</option>
+                        <option value="read_image">Read Image</option>
+                    </select>
                 </div>
-            </div>
 
-            <!-- LoRA Configuration -->
-            <div id="loraConfig" class="hidden">
-                <div class="config-section">
-                    <label for="loraDestination">LoRA Destination ID (0-255) (Setting to 255 broadcasts to all nodes)</label>
-                    <input type="number" id="loraDestination" value="0" min="0" max="255" placeholder="Recipient integer ID">
-                </div>
-            </div>
-
-            <!-- Command Type Selection -->
-            <div class="form-group">
-                <label for="commandType">Command Type</label>
-                <select id="commandType">
-                    <option value="bash_command">Bash Command</option>
-                    <option value="edit_file">Edit File</option>
-                    <option value="basic_action">Python Action</option>
-                    <option value="read_file">Read File</option>
-                    <option value="read_image">Read Image</option>
-                </select>
-            </div>
-
-            <!-- Dynamic Fields -->
-            <div class="dynamic-fields">
-                <!-- Bash Command Fields -->
-                <div id="fields_bash_command" class="field-group">
-                    <div class="form-group">
-                        <label for="command">Command</label>
-                        <input type="text" id="command">
+                <!-- Dynamic Fields -->
+                <div class="dynamic-fields">
+                    <div id="fields_bash_command" class="field-group">
+                        <div class="form-group">
+                            <label for="command">Command</label>
+                            <input type="text" id="command">
+                        </div>
+                    </div>
+                    <div id="fields_edit_file" class="field-group hidden">
+                        <div class="form-group">
+                            <label for="edit_file_name">File Name</label>
+                            <input type="text" id="edit_file_name">
+                        </div>
+                        <div class="form-group">
+                            <label for="file_content">File Content</label>
+                            <textarea id="file_content"></textarea>
+                        </div>
+                    </div>
+                    <div id="fields_basic_action" class="field-group hidden">
+                        <div class="form-group">
+                            <label for="action">Python Code</label>
+                            <textarea id="action"></textarea>
+                        </div>
+                    </div>
+                    <div id="fields_read_file" class="field-group hidden">
+                        <div class="form-group">
+                            <label for="read_file_name">File Name</label>
+                            <input type="text" id="read_file_name">
+                        </div>
+                    </div>
+                    <div id="fields_read_image" class="field-group hidden">
+                        <div class="form-group">
+                            <label for="image_file_name">Image File Path</label>
+                            <input type="text" id="image_file_name">
+                        </div>
                     </div>
                 </div>
 
-                <!-- Edit File Fields -->
-                <div id="fields_edit_file" class="field-group hidden">
-                    <div class="form-group">
-                        <label for="edit_file_name">File Name</label>
-                        <input type="text" id="edit_file_name">
-                    </div>
-                    <div class="form-group">
-                        <label for="file_content">File Content</label>
-                        <textarea id="file_content"></textarea>
-                    </div>
+                <!-- Buttons Row -->
+                <div style="display:flex;gap:10px;">
+                    <button class="btn" id="sendBtn" onclick="sendCommand()" style="flex:1;">
+                        Send Command
+                    </button>
+                    <button class="btn-secondary" id="aiBtn" onclick="openAiModal()">
+                        ✨ AI Assist
+                    </button>
                 </div>
 
-                <!-- Basic Action Fields -->
-                <div id="fields_basic_action" class="field-group hidden">
-                    <div class="form-group">
-                        <label for="action">Python Code</label>
-                        <textarea id="action"></textarea>
-                    </div>
+                <!-- Response Section -->
+                <div class="response-section" id="responseSection">
+                    <h3>Response</h3>
+                    <div class="response-content" id="responseContent"></div>
                 </div>
+            </div><!-- end #tab-commands -->
 
-                <!-- Read File Fields -->
-                <div id="fields_read_file" class="field-group hidden">
-                    <div class="form-group">
-                        <label for="read_file_name">File Name</label>
-                        <input type="text" id="read_file_name">
+            <!-- Map tab -->
+            <div class="viewport-content hidden" id="tab-map">
+                <div class="map-controls">
+                    <div class="map-status">
+                        <span class="map-status-dot disconnected" id="mapStatusDot"></span>
+                        <span class="map-status-label" id="mapStatusText">DISCONNECTED</span>
                     </div>
-                </div>
-
-                <!-- Read Image Fields -->
-                <div id="fields_read_image" class="field-group hidden">
-                    <div class="form-group">
-                        <label for="image_file_name">Image File Path</label>
-                        <input type="text" id="image_file_name">
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn" style="width:auto;padding:9px 18px;" onclick="startMapping()">Start</button>
+                        <button class="btn-secondary" onclick="stopMapping()">Stop</button>
+                        <button class="btn-secondary" onclick="clearMapping()">Clear</button>
                     </div>
                 </div>
-            </div>
+                <div class="map-canvas-wrap">
+                    <canvas id="mapCanvas"></canvas>
+                    <canvas id="minimapCanvas" width="160" height="160"></canvas>
+                </div>
+                <div class="map-stats">
+                    <span class="map-stat-item">Points: <span id="mapPointCount">0</span></span>
+                    <span class="map-stat-item">Coverage: <span id="mapCoverage">0.0</span> m²</span>
+                    <span class="map-stat-item">Time: <span id="mapElapsed">00:00</span></span>
+                </div>
+            </div><!-- end #tab-map -->
+        </div><!-- end .main-viewport -->
 
-            <!-- Buttons Row -->
-            <div style="display:flex;gap:10px;">
-                <button class="btn" id="sendBtn" onclick="sendCommand()" style="flex:1;">
-                    Send Command
-                </button>
-                <button class="btn-secondary" id="aiBtn" onclick="openAiModal()">
-                    &#x2728; AI Assist
-                </button>
-            </div>
+        <!-- Right panel: device cards + config -->
+        <div class="right-panel">
 
-            <!-- Response Section -->
-            <div class="response-section" id="responseSection">
-                <h3>Response</h3>
-                <div class="response-content" id="responseContent">
+            <!-- Device cards -->
+            <div class="panel-section">
+                <div class="panel-section-title">Devices</div>
+
+                <!-- Rover (Pi) card -->
+                <div class="device-card rpi" id="roverCard">
+                    <div class="device-card-header">
+                        <span class="status-dot" id="roverStatusDot"></span>
+                        <span class="device-name">Rover</span>
+                        <span class="device-badge rpi-badge">Raspberry Pi</span>
+                    </div>
+                    <div class="device-rows">
+                        <div class="device-row">
+                            <span class="key">Connection</span>
+                            <span class="val gray" id="roverStatusText">Unknown</span>
+                        </div>
+                        <div class="device-row">
+                            <span class="key">Mode</span>
+                            <span class="val blue" id="roverModeText">WiFi</span>
+                        </div>
+                        <div class="device-row">
+                            <span class="key">Address</span>
+                            <span class="val" id="roverAddressText">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Jetson card -->
+                <div class="device-card jetson offline" id="jetsonCard">
+                    <div class="device-card-header">
+                        <span class="status-dot red" id="jetsonStatusDot"></span>
+                        <span class="device-name">Mapper</span>
+                        <span class="device-badge jetson-badge">Jetson Nano</span>
+                    </div>
+                    <div class="device-rows">
+                        <div class="device-row">
+                            <span class="key">Connection</span>
+                            <span class="val red" id="jetsonStatusText">Offline</span>
+                        </div>
+                        <div class="device-row">
+                            <span class="key">Points</span>
+                            <span class="val cyan" id="jetsonPointsText">0</span>
+                        </div>
+                        <div class="device-row">
+                            <span class="key">WebSocket</span>
+                            <span class="val" id="jetsonWsText">:9001</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div><!-- end #tab-commands -->
 
-        <!-- Map tab -->
-        <div id="tab-map" class="hidden" style="padding:28px;background:var(--bg);">
-            <div class="map-controls">
-                <div class="map-status">
-                    <span class="map-status-dot disconnected" id="mapStatusDot"></span>
-                    <span class="tech-label" id="mapStatusText">DISCONNECTED</span>
+            <!-- Configuration -->
+            <div class="panel-section" style="flex:1;">
+                <div class="panel-section-title">Configuration</div>
+
+                <!-- WiFi config -->
+                <div id="wifiConfig">
+                    <div class="config-field">
+                        <div class="config-label">Rover Server Host</div>
+                        <input class="config-input" type="text" id="serverUrl" value="localhost" placeholder="IP or hostname">
+                        <!-- hidden status-indicator kept for JS compatibility -->
+                        <span class="status-indicator status-offline hidden" id="statusIndicator"></span>
+                    </div>
+                    <div class="config-field">
+                        <div class="config-label">Timeout (seconds)</div>
+                        <input class="config-input" type="number" id="timeout" value="35" min="1" max="300" style="width:100px;">
+                    </div>
                 </div>
-                <div style="display:flex;gap:8px;">
-                    <button class="btn" style="width:auto;padding:10px 20px;" onclick="startMapping()">Start</button>
-                    <button class="btn-secondary" onclick="stopMapping()">Stop</button>
-                    <button class="btn-secondary" onclick="clearMapping()">Clear</button>
+
+                <!-- LoRa config -->
+                <div id="loraConfig" class="hidden">
+                    <div class="config-field">
+                        <div class="config-label">LoRa Destination ID (0–255)</div>
+                        <input class="config-input" type="number" id="loraDestination" value="0" min="0" max="255" style="width:100px;">
+                    </div>
                 </div>
+
+                <div class="config-field">
+                    <div class="config-label">Jetson WS URL</div>
+                    <input class="config-input" type="text" id="jetsonWsUrl" placeholder="ws://192.168.1.100:9001">
+                </div>
+
+                <button class="config-save-btn" onclick="saveConfig()">Save Config</button>
             </div>
 
-            <div class="map-canvas-wrap">
-                <canvas id="mapCanvas"></canvas>
-                <canvas id="minimapCanvas" width="160" height="160"></canvas>
-            </div>
+        </div><!-- end .right-panel -->
+    </div><!-- end .main-area -->
 
-            <div class="map-stats">
-                <span class="tech-label">Points: <span id="mapPointCount">0</span></span>
-                <span class="tech-label">Coverage: <span id="mapCoverage">0.0</span> m²</span>
-                <span class="tech-label">Time: <span id="mapElapsed">00:00</span></span>
-            </div>
-        </div><!-- end #tab-map -->
+    <!-- Telemetry bar -->
+    <div class="telemetry-bar">
+        <div class="telem-item">
+            <span class="telem-label">Rover</span>
+            <span class="status-dot" id="telemRoverDot"></span>
+            <span class="telem-val gray" id="telemRoverText">—</span>
+        </div>
+        <div class="telem-item">
+            <span class="telem-label">Mapper</span>
+            <span class="status-dot red" id="telemMapperDot"></span>
+            <span class="telem-val red" id="telemMapperText">Offline</span>
+        </div>
+        <div class="telem-item">
+            <span class="telem-label">Mode</span>
+            <span class="mode-badge" id="telemModeBadge">WiFi</span>
+        </div>
+        <div class="telem-item">
+            <span class="telem-label">Points</span>
+            <span class="telem-val cyan" id="telemPoints">0</span>
+        </div>
     </div>
 
     <!-- AI Assistant Modal -->
     <div class="ai-overlay" id="aiOverlay" onclick="if(event.target===this)closeAiModal()">
         <div class="ai-modal">
             <div class="ai-modal-header">
-                <h3>&#x1F916; AI Command Assistant</h3>
+                <h3>🤖 AI Command Assistant</h3>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <button class="ai-clear-btn" onclick="clearAiChat()">Clear Chat</button>
                     <button class="ai-close-btn" onclick="closeAiModal()">&times;</button>
@@ -831,7 +918,7 @@
     </div>
 
     <!-- AI FAB -->
-    <button class="ai-fab" onclick="openAiModal()" title="AI Command Assistant">&#x2728;</button>
+    <button class="ai-fab" onclick="openAiModal()" title="AI Command Assistant">✨</button>
 
     <script>
         /* ── Three.js map globals ── */
