@@ -415,11 +415,11 @@ def ai_command():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-# Start Jetson WS client in background (only when not testing)
+# Start Jetson WS client in background (only in reloader worker, not the parent process)
 if not os.environ.get("TESTING"):
     _map_thread = threading.Thread(target=_jetson_ws_thread, daemon=True)
     _map_thread.start()
 
 if __name__ == '__main__':
     os.makedirs('templates', exist_ok=True)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=5000)

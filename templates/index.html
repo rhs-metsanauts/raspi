@@ -937,33 +937,25 @@
             const W = wrap.clientWidth;
             const H = wrap.clientHeight;
 
-            // Scene
             threeScene = new THREE.Scene();
             threeScene.background = new THREE.Color(0x070c16);
 
-            // Camera
             threeCamera = new THREE.PerspectiveCamera(60, W / H, 0.01, 1000);
             threeCamera.position.set(0, 5, 8);
             threeCamera.lookAt(0, 0, 0);
 
-            // Renderer
             threeRenderer = new THREE.WebGLRenderer({ canvas, antialias: false });
             threeRenderer.setPixelRatio(window.devicePixelRatio);
             threeRenderer.setSize(W, H);
 
-            // Orbit controls
             threeControls = new THREE.OrbitControls(threeCamera, threeRenderer.domElement);
             threeControls.enableDamping = true;
             threeControls.dampingFactor = 0.05;
 
-            // Reference grid
             const grid = new THREE.GridHelper(20, 40, 0x1c2c48, 0x1c2c48);
             threeScene.add(grid);
-
-            // Axes (1m scale)
             threeScene.add(new THREE.AxesHelper(1));
 
-            // Pre-allocate point cloud buffers
             positionArray = new Float32Array(MAX_POINTS * 3);
             colorArray = new Float32Array(MAX_POINTS * 3);
             pointGeometry = new THREE.BufferGeometry();
@@ -978,7 +970,6 @@
             });
             threeScene.add(new THREE.Points(pointGeometry, pointMaterial));
 
-            // Resize handler
             window.addEventListener('resize', () => {
                 if (document.getElementById('tab-map').classList.contains('hidden')) return;
                 const nW = wrap.clientWidth;
@@ -988,7 +979,6 @@
                 threeRenderer.setSize(nW, nH);
             });
 
-            // Render loop (paused when Map tab is hidden)
             function animate() {
                 requestAnimationFrame(animate);
                 if (!document.getElementById('tab-map').classList.contains('hidden')) {
