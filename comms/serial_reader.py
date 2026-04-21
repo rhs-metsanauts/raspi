@@ -16,7 +16,7 @@ import sys
 import argparse
 import time
 
-from command_executor import execute_command
+from robot.command_executor import execute_command
 
 DATA_PREFIX = "DATA_JSON:"
 SERIAL_SUPPORTED_TYPES = ["bash_command", "edit_file", "basic_action"]

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
 
-from command_executor import execute_command, SUPPORTED_TYPES
+from robot.command_executor import execute_command, SUPPORTED_TYPES
 
 app = FastAPI(title="Remote Command Server")
 

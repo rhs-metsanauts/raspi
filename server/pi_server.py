@@ -4,7 +4,7 @@ Replicates the /execute endpoint from main.py.
 """
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-from command_executor import execute_command
+from robot.command_executor import execute_command
 
 PORT = 8000
 
