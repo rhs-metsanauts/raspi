@@ -1,5 +1,5 @@
 import pi_servo_hat
-import RPi.GPIO as GPIO
+import lgpio
 import time
 import cv2
 import base64
@@ -22,44 +22,51 @@ class RockerBogie:
 
 class Drivebase:
     def __init__(self):
-        self.IN1 = 22 #17
-        self.IN2 = 24 #27
-        self.IN3 = 17 #22
-        self.IN4 = 27 #24
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup([self.IN1, self.IN2, self.IN3, self.IN4], GPIO.OUT)
-        self.pwm1 = GPIO.PWM(self.IN1, 1000)
-        self.pwm2 = GPIO.PWM(self.IN2, 1000)
-        self.pwm3 = GPIO.PWM(self.IN3, 1000)
-        self.pwm4 = GPIO.PWM(self.IN4, 1000)
-        self.pwm1.start(0)
-        self.pwm2.start(0)
-        self.pwm3.start(0)
-        self.pwm4.start(0)
+        self.IN1 = 17
+        self.IN2 = 27
+        self.IN3 = 22
+        self.IN4 = 24
+        self._freq = 1000
+        # Try Pi 5 chip (4) first, then Pi 4 chip (0)
+        for chip in (4, 0):
+            try:
+                self._h = lgpio.gpiochip_open(chip)
+                break
+            except Exception:
+                continue
+        else:
+            raise RuntimeError("Could not open any GPIO chip")
+        for pin in [self.IN1, self.IN2, self.IN3, self.IN4]:
+            lgpio.gpio_claim_output(self._h, pin)
+            lgpio.tx_pwm(self._h, pin, self._freq, 0)
+
+    def _set_pwm(self, pin, duty):
+        """duty: 0-100"""
+        lgpio.tx_pwm(self._h, pin, self._freq, duty)
 
     def setLeft(self, power):
         """power: -1.0 to 1.0"""
         if power > 0:
-            self.pwm1.ChangeDutyCycle(power * 100)
-            self.pwm2.ChangeDutyCycle(0)
+            self._set_pwm(self.IN1, power * 100)
+            self._set_pwm(self.IN2, 0)
         elif power < 0:
-            self.pwm1.ChangeDutyCycle(0)
-            self.pwm2.ChangeDutyCycle(abs(power) * 100)
+            self._set_pwm(self.IN1, 0)
+            self._set_pwm(self.IN2, abs(power) * 100)
         else:
-            self.pwm1.ChangeDutyCycle(0)
-            self.pwm2.ChangeDutyCycle(0)
+            self._set_pwm(self.IN1, 0)
+            self._set_pwm(self.IN2, 0)
 
     def setRight(self, power):
         """power: -1.0 to 1.0"""
         if power > 0:
-            self.pwm3.ChangeDutyCycle(power * 100)
-            self.pwm4.ChangeDutyCycle(0)
+            self._set_pwm(self.IN3, power * 100)
+            self._set_pwm(self.IN4, 0)
         elif power < 0:
-            self.pwm3.ChangeDutyCycle(0)
-            self.pwm4.ChangeDutyCycle(abs(power) * 100)
+            self._set_pwm(self.IN3, 0)
+            self._set_pwm(self.IN4, abs(power) * 100)
         else:
-            self.pwm3.ChangeDutyCycle(0)
-            self.pwm4.ChangeDutyCycle(0)
+            self._set_pwm(self.IN3, 0)
+            self._set_pwm(self.IN4, 0)
 
     def drive_instant(self, left, right):
         self.setLeft(left)
@@ -73,11 +80,12 @@ class Drivebase:
         self.setRight(0)
 
     def cleanup(self):
-        self.pwm1.stop()
-        self.pwm2.stop()
-        self.pwm3.stop()
-        self.pwm4.stop()
-        GPIO.cleanup()
+        self.setLeft(0)
+        self.setRight(0)
+        time.sleep(0.5)
+        for pin in [self.IN1, self.IN2, self.IN3, self.IN4]:
+            lgpio.tx_pwm(self._h, pin, self._freq, 0)
+        lgpio.gpiochip_close(self._h)
 
     # Convenience movement methods
     def forward(self, power, duration=None):
@@ -431,7 +439,6 @@ if __name__ == '__main__':
     rover = Rover()
     rover.setup_regular_position()  # Initialize rocker bogie to regular position
     rover.forward(0.5, duration=2)   # Drive forward
-    time.sleep(1)                    # Wait for a second
     rover.turn_left(0.5, duration=1) # Turn left
     rover.stop()                     # Stop motors
     print('hi')
