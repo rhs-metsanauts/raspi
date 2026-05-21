@@ -2,5 +2,16 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
 
 *.json
+
+# Claude Code skills/plugins cache
+.superpowers/
+.claude/
+
+# Separate git repos
+metsanauts-website/
+
+# Large media (not for source control)
+assets/Testing-Videos/

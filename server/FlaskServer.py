@@ -22,7 +22,6 @@ with open(_PROMPT_PATH, "r", encoding="utf-8") as _f:
     AI_SYSTEM_PROMPT = _f.read()
 
 # Load Robot.py and extract just the essential API documentation (not full source)
-_ROBOT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Robot.py")
 _ROBOT_API_DOCS = """
 ## Rover Class API Reference
 
